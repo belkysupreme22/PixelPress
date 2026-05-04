@@ -3,12 +3,12 @@
 PixelPress is a high-performance, privacy-focused image compression engine that runs entirely in your browser. Optimize your images without ever uploading them to a server.
 
 <p align="center">
-  <img src="public/logo.png" alt="PixelPress Logo">
+  <img src="public/banner.png" alt="PixelPress Banner" width="100%">
 </p>
 
 ## 🚀 Key Features
 
-- **100% Client-Side Processing****: Powered by native browser APIs. Your files never leave your device, ensuring total privacy.
+- **100% Client-Side Processing**: Powered by native browser APIs. Your files never leave your device, ensuring total privacy.
 - **Batch Optimization**: Upload and compress multiple images simultaneously.
 - **Smart Format Conversion**: Seamlessly convert between **PNG**, **JPEG**, and **WebP**.
 - **Adjustable Quality**: Fine-tune the balance between file size and visual fidelity.

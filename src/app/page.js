@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import JSZip from 'jszip';
-import { UploadCloud, Zap, Download, Lock, GitBranch, ImagePlus, ShieldCheck, FileType, ArrowDownCircle, AlertCircle } from 'lucide-react';
+import { UploadCloud, Zap, Download, Lock, ImagePlus, ShieldCheck, FileType, ArrowDownCircle, AlertCircle } from 'lucide-react';
 import styles from './page.module.css';
 import { compressImage, formatBytes } from '../utils/compressor';
 
@@ -105,9 +105,6 @@ export default function Home() {
             <div className={styles.privacyBadge}>
               <Lock size={14} /> 100% Private
             </div>
-            <a href="#" className={styles.githubLink}>
-              <GitBranch size={16} /> GitHub
-            </a>
           </div>
         </div>
       </nav>

@@ -50,22 +50,6 @@
   font-weight: 500;
   color: var(--success);
 }
-.githubLink {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  padding: var(--sp-2) var(--sp-3);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  transition: all var(--t-base) var(--ease);
-}
-.githubLink:hover {
-  border-color: var(--border-hover);
-  background: var(--bg-card-hover);
-  color: var(--text-primary);
 }
 
 .hero {

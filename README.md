@@ -2,6 +2,9 @@
 
 PixelPress is a high-performance, privacy-focused image compression engine that runs entirely in your browser. Optimize your images without ever uploading them to a server.
 
+**[Live Demo](https://pixel-press-iota.vercel.app/)**
+
+
 <p align="center">
   <img src="public/banner.png" alt="PixelPress Banner" width="100%">
 </p>

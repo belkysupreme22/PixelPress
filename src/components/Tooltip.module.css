@@ -1,0 +1,87 @@
+.tooltipWrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tooltipBubble {
+  position: absolute;
+  z-index: 1000;
+  pointer-events: none;
+  background: var(--bg-surface-alt, #0e0e0e);
+  border: 1px solid var(--border, #1f1f1f);
+  border-radius: var(--radius, 3px);
+  padding: 8px 12px;
+  width: 240px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), rgba(255, 255, 255, 0.04) 0 1px 0 inset;
+  animation: tooltipFade 150ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes tooltipFade {
+  from {
+    opacity: 0;
+    transform: translateY(3px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.top {
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.bottom {
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.left {
+  right: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.right {
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.tooltipLabel {
+  font-family: var(--font-display, monospace);
+  font-size: 11px;
+  color: var(--text-primary, #ffffff);
+  margin-bottom: 2px;
+  font-weight: 500;
+}
+
+.tooltipText {
+  font-family: var(--font-mono, monospace);
+  font-size: 10.5px;
+  color: var(--text-muted, #7a7a7a);
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+/* Subtle trigger icon that never breaks layout */
+.helpTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-subtle, #555555);
+  cursor: help;
+  transition: color 150ms ease;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.helpTrigger:hover,
+.helpTrigger:focus {
+  color: var(--accent, #4ade80);
+}

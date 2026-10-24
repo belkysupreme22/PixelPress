@@ -1,32 +1,134 @@
 "use client";
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import JSZip from 'jszip';
-import { UploadCloud, Zap, Download, Lock, ImagePlus, ShieldCheck, FileType, ArrowDownCircle, AlertCircle } from 'lucide-react';
+import { 
+  Aperture,
+  Feather,
+  EyeOff,
+  Focus,
+  Shrink,
+  ImageDown,
+  Images,
+  Boxes,
+  Vault,
+  Compass,
+  Scale,
+  ScanLine,
+  PackageCheck,
+  Download, 
+  Trash2, 
+  Check, 
+  AlertCircle, 
+  RefreshCw, 
+  SlidersHorizontal,
+  Info
+} from 'lucide-react';
 import styles from './page.module.css';
 import { compressImage, formatBytes } from '../utils/compressor';
+import FlickeringGrid from '../components/FlickeringGrid';
+import Tooltip from '../components/Tooltip';
+import ToastContainer from '../components/Toast';
 
 export default function Home() {
   const [images, setImages] = useState([]);
   const [format, setFormat] = useState('original');
-  const [quality, setQuality] = useState(70);
+  const [quality, setQuality] = useState(75);
+  const [effort, setEffort] = useState(4);
   const [isCompressing, setIsCompressing] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [hasRefusal, setHasRefusal] = useState(false);
+  const [toasts, setToasts] = useState([]);
+  const [activeBottomTab, setActiveBottomTab] = useState('faq'); // 'faq' | 'about'
   const fileInputRef = useRef(null);
 
+  // Toast notification dispatcher
+  const notify = useCallback((title, message, type = 'info', duration = 3500) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts(prev => [...prev, { id, title, message, type }]);
+
+    if (duration > 0) {
+      setTimeout(() => {
+        setToasts(prev => prev.filter(t => t.id !== id));
+      }, duration);
+    }
+  }, []);
+
+  const dismissToast = useCallback((id) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  // Auto-compress a single image
+  const compressSingle = async (imgItem, targetFormat, targetQuality, targetEffort) => {
+    try {
+      const result = await compressImage(imgItem.originalFile, {
+        format: targetFormat,
+        quality: targetQuality,
+        effort: targetEffort,
+      });
+
+      setImages(prev => prev.map(item => {
+        if (item.id !== imgItem.id) return item;
+        return {
+          ...item,
+          ...result,
+          originalSize: item.originalSize || result.originalSize || item.originalFile.size,
+          id: item.id,
+          status: 'done',
+        };
+      }));
+
+      // Notify completion
+      const savedText = result.reductionPercentage > 0 
+        ? `${result.reductionPercentage.toFixed(1)}% smaller` 
+        : 'already optimal';
+      notify('Optimization complete', `${imgItem.name} is ${savedText}`, 'success');
+    } catch (err) {
+      setImages(prev => prev.map(item => {
+        if (item.id !== imgItem.id) return item;
+        return {
+          ...item,
+          status: 'error',
+          error: err.message || 'Compression failed',
+        };
+      }));
+      notify('Compression error', `Failed to process ${imgItem.name}`, 'error');
+    }
+  };
+
+  // Auto-compress on upload / drop
   const handleFiles = (files) => {
-    const validFiles = Array.from(files).filter(f => f.type.match(/^image\/(jpeg|png|webp)$/));
-    const newImages = validFiles.map(f => ({
+    const rawList = Array.from(files);
+    const validFiles = rawList.filter(f => 
+      f.type.match(/^image\/(jpeg|png|webp|avif)$/)
+    );
+
+    if (rawList.length > 0 && validFiles.length === 0) {
+      setHasRefusal(true);
+      setTimeout(() => setHasRefusal(false), 500);
+      notify('Unsupported format', 'Please upload PNG, JPEG, WebP, or AVIF files.', 'error');
+      return;
+    }
+
+    const newItems = validFiles.map(f => ({
       id: Math.random().toString(36).substring(2, 9),
       originalFile: f,
-      originalSize: f.size,
+      originalSize: f.size || 0,
       name: f.name,
-      status: 'pending'
+      status: 'compressing', // starts automatically!
     }));
-    setImages(prev => [...prev, ...newImages]);
+
+    setImages(prev => [...prev, ...newItems]);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+
+    notify('Processing started', `Optimizing ${newItems.length} ${newItems.length === 1 ? 'file' : 'files'} in background`, 'info');
+
+    // Immediately trigger WASM workers for each image
+    newItems.forEach(item => {
+      compressSingle(item, format, quality, effort);
+    });
   };
 
   const onDrop = (e) => {
@@ -35,33 +137,39 @@ export default function Home() {
     handleFiles(e.dataTransfer.files);
   };
 
-  const handleCompressAll = async () => {
+  // Recompress all images when settings change or user clicks Recompress
+  const handleRecompressAll = async (targetFmt = format, targetQ = quality, targetEff = effort) => {
+    if (images.length === 0) return;
     setIsCompressing(true);
-    const updatedImages = [...images];
-    
-    for (let i = 0; i < updatedImages.length; i++) {
-      // Set status to compressing so the UI updates
-      updatedImages[i] = { ...updatedImages[i], status: 'compressing' };
-      setImages([...updatedImages]);
 
-      // Always compress when the button is clicked, ignoring previous status
-      const result = await compressImage(updatedImages[i].originalFile, { format, quality });
-      
-      // Preserve the original ID so React doesn't lose track of the element
-      updatedImages[i] = { ...result, id: updatedImages[i].id };
-      setImages([...updatedImages]);
-    }
+    notify('Recomputing queue', `Applying new codec & quality parameters`, 'info');
+    setImages(prev => prev.map(img => ({ ...img, status: 'compressing' })));
+
+    await Promise.all(
+      images.map(img => compressSingle(img, targetFmt, targetQ, targetEff))
+    );
+
     setIsCompressing(false);
   };
 
+  // Single download trigger
+  const handleDownloadSingle = (img) => {
+    notify('Download started', `Downloading ${img.name}`, 'download');
+  };
+
   const handleDownloadAll = async () => {
-    const zip = new JSZip();
     const completed = images.filter(img => img.status === 'done' && img.compressedBlob);
-    
+    if (completed.length === 0) return;
+
+    notify('Preparing archive', `Packaging ${completed.length} optimized files into ZIP...`, 'info', 2000);
+
+    const zip = new JSZip();
     completed.forEach(img => {
       let finalName = img.name;
       if (format !== 'original') {
-        const ext = format === 'image/jpeg' ? '.jpg' : format === 'image/png' ? '.png' : '.webp';
+        const ext = format === 'image/jpeg' ? '.jpg' : 
+                    format === 'image/png' ? '.png' : 
+                    format === 'image/webp' ? '.webp' : '.avif';
         finalName = img.name.replace(/\.[^/.]+$/, "") + ext;
       }
       zip.file(finalName, img.compressedBlob);
@@ -72,208 +180,559 @@ export default function Home() {
     link.href = URL.createObjectURL(content);
     link.download = 'pixelpress_optimized.zip';
     link.click();
+
+    notify('Download complete', 'Saved pixelpress_optimized.zip to your downloads', 'download');
   };
 
   const handleClear = () => {
-    images.forEach(img => { if(img.compressedUrl) URL.revokeObjectURL(img.compressedUrl); });
+    images.forEach(img => {
+      if (img.compressedUrl) URL.revokeObjectURL(img.compressedUrl);
+    });
     setImages([]);
+    notify('Queue cleared', 'Workspace reset and memory released', 'clear');
   };
 
   const removeImage = (id) => {
-    const imgToRemove = images.find(img => img.id === id);
-    if (imgToRemove?.compressedUrl) {
-      URL.revokeObjectURL(imgToRemove.compressedUrl);
+    const item = images.find(img => img.id === id);
+    if (item?.compressedUrl) {
+      URL.revokeObjectURL(item.compressedUrl);
     }
     setImages(images.filter(img => img.id !== id));
+    if (item) {
+      notify('Removed', `Removed ${item.name} from queue`, 'info', 2000);
+    }
   };
 
-  const totalOrig = images.reduce((acc, img) => acc + img.originalSize, 0);
-  const totalOpt = images.reduce((acc, img) => acc + (img.compressedSize || img.originalSize), 0);
-  const totalSaved = totalOrig - totalOpt;
-  const savedPercent = totalOrig === 0 ? 0 : Math.round((totalSaved / totalOrig) * 100);
-  const ringOffset = 125.6 - (125.6 * savedPercent) / 100;
+  // Safe numerical stats calculation - NO NaN, NO negative values
+  const totalOrig = images.reduce((acc, img) => acc + (typeof img.originalSize === 'number' && !isNaN(img.originalSize) ? img.originalSize : 0), 0);
+  const totalOpt = images.reduce((acc, img) => {
+    const optSize = typeof img.compressedSize === 'number' && !isNaN(img.compressedSize) ? img.compressedSize : img.originalSize;
+    return acc + (typeof optSize === 'number' && !isNaN(optSize) ? optSize : 0);
+  }, 0);
+  const totalSaved = Math.max(0, totalOrig - totalOpt);
+  const savedPercent = totalOrig > 0 && totalSaved > 0 ? Math.round((totalSaved / totalOrig) * 100) : 0;
+
+  // Stepper flow indicator
+  const anyCompressing = images.some(i => i.status === 'compressing');
+  const allDone = images.length > 0 && images.every(i => i.status === 'done');
+  const currentStep = images.length === 0 ? 1 : anyCompressing ? 2 : 3;
 
   return (
     <>
-      <nav className={styles.navbar}>
-        <div className={styles.navContainer}>
-          <div className={styles.navLogo}>
-            <img src="/logo.png" alt="PixelPress Logo" className={styles.logoImage} />
-            <span className={styles.logoText}>PixelPress</span>
+      {/* Toast Notification Container */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+
+      {/* 44px Sticky Header */}
+      <header className={styles.header}>
+        <div className={styles.headerInner}>
+          <div className={styles.brand}>
+            <Aperture className={styles.brandIcon} />
+            <span className={styles.brandName}>PixelPress</span>
+            <span className={`${styles.badge} ${styles.badgeSuccess}`}>
+              <span className={styles.pulseDot} />
+              Instant & Private
+            </span>
           </div>
-          <div className={styles.navRight}>
-            <div className={styles.privacyBadge}>
-              <Lock size={14} /> 100% Private
-            </div>
+
+          <div className={styles.headerMeta}>
+            <span className={styles.badge}>
+              <EyeOff size={12} />
+              100% Private · Runs in your browser
+            </span>
           </div>
         </div>
-      </nav>
-
-      <header className={styles.hero}>
-        <span className={styles.heroEyebrow}>Local Compression Engine</span>
-        <h1 className={styles.heroTitle}>Free Image <span className="gradient-text">Compressor</span></h1>
-        <p className={styles.heroSubtitle}>High-performance PNG, JPG & WebP optimization. Powered by native browser APIs, 100% private.</p>
       </header>
 
-      <main className={styles.mainContainer}>
-        <div className={`${styles.toolCard} delay-1 anim-scale-in`}>
-          <div className={styles.toolHeader}>
-            <div>
-              <h2 className={styles.toolTitle}>Image Optimizer</h2>
-              <p className={styles.toolSubtitle}>Drop images below to start compressing.</p>
-            </div>
-            <div className={styles.summaryPanel}>
-              <div className={styles.summaryStats}>
-                <div className={styles.metaRow}>Original: <span>{formatBytes(totalOrig)}</span></div>
-                <div className={styles.metaRow}>Optimized: <span>{formatBytes(totalOpt)}</span></div>
-                <div className={styles.metaRow}>Saved: <span className="gradient-text">{formatBytes(totalSaved)}</span></div>
-              </div>
-              <div className={styles.ringWrap}>
-                <svg className={styles.ringSvg} width="48" height="48" viewBox="0 0 48 48">
-                  <defs>
-                    <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#60A5FA" />
-                      <stop offset="100%" stopColor="#3B82F6" />
-                    </linearGradient>
-                  </defs>
-                  <circle className={styles.ringBg} cx="24" cy="24" r="20"></circle>
-                  <circle className={styles.ringProgress} cx="24" cy="24" r="20" style={{ strokeDashoffset: ringOffset }}></circle>
-                </svg>
-                <span className={styles.ringText}>{savedPercent}%</span>
-              </div>
-            </div>
+      <main className={styles.main}>
+        {/* Step-by-step progress guide: 01 Import -> 02 Optimize -> 03 Export */}
+        <nav aria-label="Pipeline Steps" className={styles.stepperBar}>
+          <div className={`${styles.stepItem} ${currentStep === 1 ? styles.stepItemActive : styles.stepItemComplete}`}>
+            <span className={styles.stepIndex}>01</span>
+            <span className={styles.stepLabel}>Select Images</span>
+          </div>
+          <div className={`${styles.stepItem} ${currentStep === 2 ? styles.stepItemActive : currentStep > 2 ? styles.stepItemComplete : ''}`}>
+            <span className={styles.stepIndex}>02</span>
+            <span className={styles.stepLabel}>
+              {anyCompressing ? 'Compressing...' : 'Ready'}
+            </span>
+          </div>
+          <div className={`${styles.stepItem} ${currentStep === 3 ? styles.stepItemActive : ''}`}>
+            <span className={styles.stepIndex}>03</span>
+            <span className={styles.stepLabel}>Download & Save</span>
+          </div>
+        </nav>
+
+        {/* Hero Section with FarmJS Flickering Canvas Simulation */}
+        <div className={styles.hero}>
+          <div className={styles.heroFlickerWrap}>
+            <FlickeringGrid 
+              squareSize={3}
+              gridGap={5}
+              flickerChance={0.2}
+              maxOpacity={0.22}
+            />
           </div>
 
-          <div className={styles.actionBar}>
+          <div className={styles.heroContent}>
+            <div className={styles.heroTag}>
+              <Feather size={12} color="var(--accent)" />
+              Featherweight Files · 100% Private · No Limits
+            </div>
+
+            <h1 className={styles.heroTitle}>
+              Smaller files. Zero compromise.
+            </h1>
+            <p className={styles.heroDesc}>
+              Compress photos and graphics up to 80% without losing detail. Fast, free, and completely private—running directly in your browser with no upload limits.
+            </p>
+          </div>
+        </div>
+
+        {/* Feature Highlights Bento */}
+        <section className={styles.marketingBento}>
+          <article className={styles.bentoCard}>
+            <div className={styles.bentoHeader}>
+              <span className={styles.bentoTitle}><Focus size={14} /> Crisp Image Quality</span>
+              <span className={styles.bentoStat}>Up to 80% Smaller</span>
+            </div>
+            <p className={styles.bentoDesc}>
+              Smart compression removes hidden bulk while keeping your photos sharp, clear, and vibrant for websites, emails, and social media.
+            </p>
+          </article>
+
+          <article className={styles.bentoCard}>
+            <div className={styles.bentoHeader}>
+              <span className={styles.bentoTitle}><Shrink size={14} /> Instant Results</span>
+              <span className={styles.bentoStat}>Zero Wait Time</span>
+            </div>
+            <p className={styles.bentoDesc}>
+              No waiting for large files to upload to slow websites. Everything compresses smoothly on your device in the background.
+            </p>
+          </article>
+
+          <article className={styles.bentoCard}>
+            <div className={styles.bentoHeader}>
+              <span className={styles.bentoTitle}><EyeOff size={14} /> 100% Private & Safe</span>
+              <span className={styles.bentoStat}>Your Device Only</span>
+            </div>
+            <p className={styles.bentoDesc}>
+              Your photos, personal documents, and designs never get uploaded to any server or cloud. Complete peace of mind.
+            </p>
+          </article>
+        </section>
+
+        {/* Controls Panel */}
+        <div className={styles.controlsPanel}>
+          <div className={styles.controlsRow}>
+            <div className={styles.controlsGroup}>
+              <div className={styles.field}>
+                <span>Format:</span>
+                <Tooltip 
+                  showIcon={true}
+                  label="Image Format" 
+                  content="Choose output format: WebP is best for websites, JPEG for photos, PNG for graphics with transparent backgrounds, and AVIF for smallest file size."
+                  position="top"
+                />
+                <select 
+                  className={styles.select}
+                  value={format} 
+                  onChange={e => {
+                    const newFmt = e.target.value;
+                    setFormat(newFmt);
+                    if (images.length > 0) handleRecompressAll(newFmt, quality, effort);
+                  }}
+                >
+                  <option value="original">Auto (Keep Original Format)</option>
+                  <option value="image/webp">WebP (Best for Websites)</option>
+                  <option value="image/jpeg">JPEG (Best for Photos)</option>
+                  <option value="image/png">PNG (Best for Graphics & Logos)</option>
+                  <option value="image/avif">AVIF (Smallest File Size)</option>
+                </select>
+              </div>
+
+              {format !== 'image/png' && (
+                <div className={styles.field}>
+                  <span>Quality:</span>
+                  <Tooltip 
+                    showIcon={true}
+                    label="Image Quality" 
+                    content="Quality level (1–100%). 75% delivers small file sizes with visually perfect clarity."
+                    position="top"
+                  />
+                  <div className={styles.rangeWrap}>
+                    <input 
+                      type="range" 
+                      min="1" 
+                      max="100" 
+                      value={quality} 
+                      onChange={e => setQuality(Number(e.target.value))}
+                      onMouseUp={() => { if (images.length > 0) handleRecompressAll(format, quality, effort); }}
+                      onTouchEnd={() => { if (images.length > 0) handleRecompressAll(format, quality, effort); }}
+                      className={styles.rangeInput}
+                    />
+                    <span className={styles.rangeVal}>{quality}%</span>
+                  </div>
+                </div>
+              )}
+
+              <div className={styles.field}>
+                <span>Effort:</span>
+                <Tooltip 
+                  showIcon={true}
+                  label="Compression Effort" 
+                  content="Compression effort (1–6). Higher levels take slightly longer to shrink files even more."
+                  position="top"
+                />
+                <div className={styles.rangeWrap}>
+                  <input 
+                    type="range" 
+                    min="1" 
+                    max="6" 
+                    value={effort} 
+                    onChange={e => setEffort(Number(e.target.value))}
+                    onMouseUp={() => { if (images.length > 0) handleRecompressAll(format, quality, effort); }}
+                    onTouchEnd={() => { if (images.length > 0) handleRecompressAll(format, quality, effort); }}
+                    className={styles.rangeInput}
+                  />
+                  <span className={styles.rangeVal}>{effort}</span>
+                </div>
+              </div>
+            </div>
+
             <div className={styles.actionButtons}>
-              <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={() => fileInputRef.current?.click()}>
-                <UploadCloud size={16} /> Upload Images
+              <button 
+                className={`${styles.btn} ${styles.btnPrimary}`}
+                onClick={() => fileInputRef.current?.click()}
+                title="Browse and select images from your device"
+              >
+                <Images size={14} /> Select Images
               </button>
               <input 
                 type="file" 
                 ref={fileInputRef} 
                 multiple 
-                accept="image/jpeg, image/png, image/webp" 
+                accept="image/jpeg, image/png, image/webp, image/avif" 
                 className="visually-hidden" 
                 onChange={(e) => handleFiles(e.target.files)} 
               />
-              <button className={`${styles.btn} ${styles.btnSecondary}`} disabled={images.length === 0 || isCompressing} onClick={handleCompressAll}>
-                <Zap size={16} /> {images.length > 1 ? 'Compress All' : 'Compress'}
+              {images.length > 0 && (
+                <button 
+                  className={`${styles.btn} ${styles.btnSecondary}`}
+                  disabled={anyCompressing}
+                  onClick={() => handleRecompressAll()}
+                  title="Re-run compression with current parameters"
+                >
+                  <RefreshCw size={14} className={anyCompressing ? styles.spinnerSmall : ''} />
+                  {anyCompressing ? 'Compressing...' : 'Recompress'}
+                </button>
+              )}
+              <button 
+                className={`${styles.btn} ${allDone ? styles.btnActionHighlight : styles.btnSecondary}`}
+                disabled={!images.some(i => i.status === 'done')}
+                onClick={handleDownloadAll}
+                title="Bundle all optimized images into a single ZIP archive"
+              >
+                <PackageCheck size={14} /> Download All (ZIP)
               </button>
-              <button className={`${styles.btn} ${styles.btnSecondary}`} disabled={!images.some(i => i.status === 'done')} onClick={handleDownloadAll}>
-                <Download size={16} /> {images.length > 1 ? 'Download All (ZIP)' : 'Download ZIP'}
+              <button 
+                className={`${styles.btn} ${styles.btnGhost}`}
+                disabled={images.length === 0}
+                onClick={handleClear}
+                title="Clear all queued images and free allocated browser memory"
+              >
+                <Trash2 size={14} /> Clear
               </button>
-              <button className={`${styles.btn} ${styles.btnGhost}`} disabled={images.length === 0} onClick={handleClear}>Clear</button>
+            </div>
+          </div>
+        </div>
+
+        {/* Drop Zone */}
+        {images.length === 0 ? (
+          <div 
+            className={`${styles.dropZone} ${isDragOver ? styles.dropZoneDrag : ''} ${hasRefusal ? styles.refusalShake : ''}`}
+            onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
+            onDragLeave={() => setIsDragOver(false)}
+            onDrop={onDrop}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <div className={styles.dropZoneGridWrap}>
+              <FlickeringGrid 
+                squareSize={2}
+                gridGap={6}
+                flickerChance={0.3}
+                maxOpacity={0.16}
+              />
+            </div>
+            <div className={styles.dropZoneContent}>
+              <ImageDown className={styles.dropIcon} />
+              <div className={styles.dropTitle}>Drop images here to compress instantly</div>
+              <div className={styles.dropSubtitle}>Supports JPG, PNG, WebP & AVIF · Unlimited batch uploads · No file size caps</div>
+              <div className={styles.dropZoneBadges}>
+                <span className={styles.dropZoneBadgeItem}>
+                  <Feather size={11} color="var(--accent)" /> Featherweight Output
+                </span>
+                <span className={styles.dropZoneBadgeItem}>
+                  <EyeOff size={11} color="var(--accent)" /> 100% Private (No Uploads)
+                </span>
+                <span className={styles.dropZoneBadgeItem}>
+                  <Boxes size={11} color="var(--accent)" /> Batch ZIP Download
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className={styles.listContainer}>
+            <div className={styles.listHeader}>
+              <span>Compressed Images ({images.length} {images.length === 1 ? 'file' : 'files'})</span>
+              <div className={styles.statsCluster}>
+                <div className={styles.statItem}>
+                  <span>Original:</span>
+                  <span className={styles.statNumber}>{formatBytes(totalOrig)}</span>
+                </div>
+                <div className={styles.statItem}>
+                  <span>Optimized:</span>
+                  <span className={styles.statNumber}>{formatBytes(totalOpt)}</span>
+                </div>
+                <div className={styles.statItem}>
+                  <span>Saved:</span>
+                  <span className={`${styles.statNumber} ${styles.statAccent}`}>
+                    {formatBytes(totalSaved)} ({savedPercent}% smaller)
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <div className={styles.controls}>
-              <div className={styles.controlGroup}>
-                <label>Format</label>
-                <select className={styles.selectInput} value={format} onChange={e => setFormat(e.target.value)}>
-                  <option value="original">Keep Original</option>
-                  <option value="image/jpeg">JPEG</option>
-                  <option value="image/png">PNG</option>
-                  <option value="image/webp">WebP</option>
-                </select>
+            {images.map(img => (
+              <div key={img.id} className={styles.itemCard}>
+                <div className={styles.thumbWrap}>
+                  {img.compressedUrl ? (
+                    <img src={img.compressedUrl} alt="preview" />
+                  ) : (
+                    <img src={URL.createObjectURL(img.originalFile)} alt="preview" />
+                  )}
+                </div>
+
+                <div className={styles.itemDetails}>
+                  <div className={styles.itemName} title={img.name}>{img.name}</div>
+                  <div className={styles.itemMeta}>
+                    <span>{img.dimensions || 'Measuring...'}</span>
+                    <span>·</span>
+                    {img.status === 'compressing' ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--accent)' }}>
+                        <span className={styles.spinnerSmall} />
+                        Compressing image...
+                      </span>
+                    ) : img.durationMs ? (
+                      <span>Compressed in {img.durationMs}ms</span>
+                    ) : (
+                      <span>Ready</span>
+                    )}
+                    {img.status === 'error' && (
+                      <span style={{ color: 'var(--error)' }}>Failed: {img.error}</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className={styles.itemTelemetry}>
+                  <div className={styles.telemetryOrig}>
+                    {formatBytes(img.originalSize || img.originalFile?.size || 0)}
+                  </div>
+                  {img.compressedSize ? (
+                    <div className={styles.telemetryOpt}>
+                      {formatBytes(img.compressedSize)}
+                    </div>
+                  ) : null}
+                  {img.status === 'done' && (
+                    <span 
+                      className={`${styles.reductionTag} ${img.reductionPercentage <= 0 ? styles.reductionTagNeutral : ''}`}
+                      title={`Original: ${formatBytes(img.originalSize)} → Compressed: ${formatBytes(img.compressedSize)}`}
+                    >
+                      {img.reductionPercentage > 0 
+                        ? `${img.reductionPercentage.toFixed(1)}% smaller` 
+                        : 'Optimal (Original kept)'}
+                    </span>
+                  )}
+                </div>
+
+                <div className={styles.itemActions}>
+                  {img.status === 'done' && (
+                    <a 
+                      href={img.compressedUrl} 
+                      download={img.name}
+                      onClick={() => handleDownloadSingle(img)}
+                      className={`${styles.actionIconBtn} ${styles.btnActionHighlight}`}
+                      title="Download this optimized image"
+                    >
+                      <Download size={14} />
+                    </a>
+                  )}
+                  <button 
+                    className={`${styles.actionIconBtn} ${styles.actionIconBtnDanger}`}
+                    onClick={() => removeImage(img.id)}
+                    title="Remove this image from queue"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
-              
-              <div className={styles.controlGroup} style={{ opacity: format === 'image/png' ? 0.4 : 1, pointerEvents: format === 'image/png' ? 'none' : 'auto' }}>
-                <label>Quality</label>
-                <input type="range" className={styles.rangeSlider} min="1" max="100" value={quality} onChange={e => setQuality(Number(e.target.value))} />
-                <span className={styles.rangeValue}>{quality}</span>
-              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Feature Highlights Strip */}
+        <section className={styles.engineStrip}>
+          <div className={styles.engineCard}>
+            <div className={styles.engineCardTitle}>
+              <Boxes size={14} /> Batch Processing
             </div>
-            
-            <div className={styles.helperText}>
-              {format === 'image/jpeg' && <><span className={`${styles.helperBadge} ${styles.lossyBadge}`}>Lossy</span> Great for photos, but no transparency. Quality slider reduces file size.</>}
-              {format === 'image/png' && <><span className={`${styles.helperBadge} ${styles.losslessBadge}`}>Lossless</span> Perfect quality and supports transparency, but large files. Quality slider is ignored.</>}
-              {format === 'image/webp' && <><span className={`${styles.helperBadge} ${styles.lossyBadge}`}>Lossy</span> Modern format. Excellent compression and supports transparency!</>}
-              {format === 'original' && <><span className={`${styles.helperBadge} ${styles.losslessBadge}`}>Auto</span> Keeps the original format. Note: highly optimized PNGs may not compress further.</>}
+            <div className={styles.engineCardDesc}>
+              Drop dozens of photos at once. Compress entire photo galleries or folders in seconds without slowing down.
             </div>
           </div>
 
-          {images.length === 0 ? (
-            <div className={styles.dropZoneWrapper}>
-              <div 
-                className={`${styles.dropZone} ${isDragOver ? styles.dragOver : ''}`} 
-                onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
-                onDragLeave={() => setIsDragOver(false)}
-                onDrop={onDrop}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <div className={styles.dropIconWrap}><ImagePlus size={32} /></div>
-                <div className={styles.dropTitle}>Drag & drop images here</div>
-                <div className={styles.dropSubtitle}>Supports PNG, JPEG, WebP • <span className={styles.dropBrowse}>Browse files</span></div>
-              </div>
+          <div className={styles.engineCard}>
+            <div className={styles.engineCardTitle}>
+              <Vault size={14} /> 100% Private & Safe
             </div>
-          ) : (
-            <div className={styles.resultsSection}>
-              <div className={styles.resultsGrid}>
-                {images.map(img => (
-                  <div key={img.id} className={styles.imageCard}>
-                    <button className={styles.removeBtn} onClick={() => removeImage(img.id)}>×</button>
-                    <div className={styles.cardTop}>
-                      <div className={`${styles.thumbWrap} ${img.status === 'compressing' ? 'loading' : ''}`}>
-                        {img.compressedUrl ? (
-                          <img src={img.compressedUrl} alt="thumbnail" />
-                        ) : (
-                          <img src={URL.createObjectURL(img.originalFile)} alt="thumbnail" />
-                        )}
-                      </div>
-                      <div className={styles.cardInfo}>
-                        <div className={styles.fileName} title={img.name}>{img.name}</div>
-                        <div className={styles.fileMeta}>
-                          <div className={styles.metaRow}>Original: <span className={styles.metaValue}>{formatBytes(img.originalSize)}</span></div>
-                          {img.compressedSize && (
-                            <div className={styles.metaRow}>Optimized: <span className={styles.metaValue}>{formatBytes(img.compressedSize)}</span></div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    {img.status === 'done' && (
-                      <div className={styles.cardBottom}>
-                        <div className={`${styles.badge} ${img.reductionPercentage > 50 ? styles.badgeGreen : img.reductionPercentage > 20 ? styles.badgeYellow : styles.badgeBlue}`}>
-                          <ArrowDownCircle size={12} /> {img.reductionPercentage.toFixed(1)}%
-                        </div>
-                        {img.reductionPercentage === 0 && (
-                          <div className={styles.zeroReductionTip}>
-                            <AlertCircle size={12} /> Try WebP
-                          </div>
-                        )}
-                        <a href={img.compressedUrl} download={img.name} className={styles.dropBrowse}>Download</a>
-                      </div>
-                    )}
+            <div className={styles.engineCardDesc}>
+              Your photos never leave your device. Perfect for personal memories, confidential work files, and client assets.
+            </div>
+          </div>
+
+          <div className={styles.engineCard}>
+            <div className={styles.engineCardTitle}>
+              <Scale size={14} /> Free Forever
+            </div>
+            <div className={styles.engineCardDesc}>
+              No subscriptions, no hidden watermarks, and no file size limits. High-speed compression open to everyone.
+            </div>
+          </div>
+        </section>
+
+        {/* Knowledge Base Section: Tabbed Switcher (FAQ / Security & Specs) */}
+        <section className={styles.knowledgeSection}>
+          <div className={styles.knowledgeHeader}>
+            <div className={styles.knowledgeTitleGroup}>
+              <h2 className={styles.knowledgeTitle}>
+                {activeBottomTab === 'faq' ? 'Frequently Asked Questions' : 'Privacy & Security'}
+              </h2>
+              <p className={styles.knowledgeSubtitle}>
+                {activeBottomTab === 'faq' 
+                  ? 'Everything you need to know about image compression, quality, and file formats.' 
+                  : 'How PixelPress guarantees total confidentiality by processing images entirely on your device.'}
+              </p>
+            </div>
+
+            <div className={styles.knowledgeTabs} role="tablist">
+              <button 
+                className={`${styles.tabBtn} ${activeBottomTab === 'faq' ? styles.tabBtnActive : ''}`}
+                onClick={() => setActiveBottomTab('faq')}
+                role="tab"
+                aria-selected={activeBottomTab === 'faq'}
+              >
+                <Compass size={13} /> FAQ
+              </button>
+              <button 
+                className={`${styles.tabBtn} ${activeBottomTab === 'about' ? styles.tabBtnActive : ''}`}
+                onClick={() => setActiveBottomTab('about')}
+                role="tab"
+                aria-selected={activeBottomTab === 'about'}
+              >
+                <Vault size={13} /> Privacy & Security
+              </button>
+            </div>
+          </div>
+
+          {/* TAB 1: FAQ */}
+          {activeBottomTab === 'faq' && (
+            <div className={styles.faqGrid}>
+              <article className={styles.faqCard}>
+                <div className={styles.faqQuestion}>
+                  <Aperture size={14} color="var(--accent)" /> How does PixelPress compress images without uploading them?
+                </div>
+                <div className={styles.faqAnswer}>
+                  PixelPress runs advanced compression software directly inside your web browser. Instead of sending your photos to an internet server, your computer does all the work locally. That makes it faster, unlimited, and completely safe.
+                </div>
+              </article>
+
+              <article className={styles.faqCard}>
+                <div className={styles.faqQuestion}>
+                  <EyeOff size={14} color="var(--accent)" /> Are my photos and personal documents completely private?
+                </div>
+                <div className={styles.faqAnswer}>
+                  Yes, 100%. None of your files ever leave your computer. There are no cloud uploads, no tracking, and no copies saved anywhere. When you close the tab, all memory is instantly cleared.
+                </div>
+              </article>
+
+              <article className={styles.faqCard}>
+                <div className={styles.faqQuestion}>
+                  <Focus size={14} color="var(--accent)" /> Will my pictures lose quality or look blurry?
+                </div>
+                <div className={styles.faqAnswer}>
+                  No. PixelPress is calibrated to remove invisible data (like hidden metadata and subtle color redundancies) while preserving visual sharpness, fine details, and true colors.
+                </div>
+              </article>
+
+              <article className={styles.faqCard}>
+                <div className={styles.faqQuestion}>
+                  <Scale size={14} color="var(--accent)" /> Are there file size or upload limits?
+                </div>
+                <div className={styles.faqAnswer}>
+                  None at all. You can compress as many large 50MB+ photos as you need, anytime, without running into paywalls or daily upload quotas.
+                </div>
+              </article>
+            </div>
+          )}
+
+          {/* TAB 2: Privacy & Security */}
+          {activeBottomTab === 'about' && (
+            <div className={styles.aboutCard}>
+              <div className={styles.aboutGrid}>
+                <div className={styles.aboutItem}>
+                  <div className={styles.aboutItemTitle}>
+                    <Vault size={14} color="var(--accent)" /> Zero Cloud Uploads
                   </div>
-                ))}
+                  <div className={styles.aboutItemDesc}>
+                    Your files never leave your device. Ideal for personal family albums, confidential business documents, client photography, and proprietary designs.
+                  </div>
+                </div>
+
+                <div className={styles.aboutItem}>
+                  <div className={styles.aboutItemTitle}>
+                    <ScanLine size={14} color="var(--accent)" /> Smooth Multitasking
+                  </div>
+                  <div className={styles.aboutItemDesc}>
+                    Processing runs quietly in the background so your browser never freezes or stutters, even when handling large batches of high-resolution images.
+                  </div>
+                </div>
+
+                <div className={styles.aboutItem}>
+                  <div className={styles.aboutItemTitle}>
+                    <Images size={14} color="var(--accent)" /> Universal Compatibility
+                  </div>
+                  <div className={styles.aboutItemDesc}>
+                    Exports standard JPG, PNG, WebP, and AVIF images ready to share by email, post to social media, or publish to websites.
+                  </div>
+                </div>
               </div>
             </div>
           )}
-        </div>
-      </main>
+        </section>
 
-      <section className={`${styles.features} delay-3 anim-fade-up`}>
-        <div className={styles.featureCard}>
-          <div className={styles.featureIcon}><Zap size={24} /></div>
-          <div className={styles.featureInfo}>
-            <div className={styles.featureTitle}>Lightning Fast</div>
-            <div className={styles.featureDesc}>Powered by native browser APIs</div>
+        {/* Clean Minimal Footer */}
+        <footer className={styles.footer}>
+          <div className={styles.footerBrand}>
+            <span>PixelPress</span>
+            <span>·</span>
+            <span>Fast, private image compression</span>
           </div>
-        </div>
-        <div className={styles.featureCard}>
-          <div className={styles.featureIcon}><ShieldCheck size={24} /></div>
-          <div className={styles.featureInfo}>
-            <div className={styles.featureTitle}>100% Private</div>
-            <div className={styles.featureDesc}>Files never leave your device</div>
+          <div className={styles.footerBadges}>
+            <span>100% In-Browser</span>
+            <span>·</span>
+            <span>Free & Open Source</span>
           </div>
-        </div>
-        <div className={styles.featureCard}>
-          <div className={styles.featureIcon}><FileType size={24} /></div>
-          <div className={styles.featureInfo}>
-            <div className={styles.featureTitle}>Format Conversion</div>
-            <div className={styles.featureDesc}>Switch between PNG, JPG, WebP</div>
-          </div>
-        </div>
-      </section>
+        </footer>
+      </main>
     </>
   );
 }

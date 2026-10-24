@@ -1,10 +1,14 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'PixelPress — Free Local Image Compressor',
-  description: 'Optimize PNG, JPEG & WebP images locally in your browser. No uploads, 100% private, fast batch processing.',
+  title: 'PixelPress — Smaller files. Zero compromise.',
+  description: 'Compress photos and graphics up to 80% without losing detail. Fast, free, and completely private—running directly in your browser with no upload limits.',
   icons: {
-    icon: '/logo.png',
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: 'any' },
+    ],
+    apple: '/apple-touch-icon.png',
   },
 };
 

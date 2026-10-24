@@ -14,7 +14,6 @@ import {
   ShieldCheck, 
   FileCode,
   Lock,
-  Layers,
   HelpCircle,
   Archive,
   Info,
@@ -35,7 +34,7 @@ export default function Home() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [hasRefusal, setHasRefusal] = useState(false);
   const [toasts, setToasts] = useState([]);
-  const [activeBottomTab, setActiveBottomTab] = useState('compare'); // 'compare' | 'faq' | 'about'
+  const [activeBottomTab, setActiveBottomTab] = useState('faq'); // 'faq' | 'about'
   const fileInputRef = useRef(null);
 
   // Toast notification dispatcher
@@ -611,23 +610,15 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Knowledge Base Section: Tabbed Switcher (Comparison Matrix / FAQ / About) */}
+        {/* Knowledge Base Section: Tabbed Switcher (FAQ / Security & Specs) */}
         <section className={styles.knowledgeSection}>
           <div className={styles.knowledgeHeader}>
             <div className={styles.knowledgeTitleGroup}>
-              <h2 className={styles.knowledgeTitle}>Architecture & Knowledge Base</h2>
-              <p className={styles.knowledgeSubtitle}>Learn how PixelPress operates, compare codecs, and explore frequently asked questions.</p>
+              <h2 className={styles.knowledgeTitle}>Knowledge Base & Privacy</h2>
+              <p className={styles.knowledgeSubtitle}>Learn how PixelPress operates, protects your files, and optimizes images directly in your browser.</p>
             </div>
 
             <div className={styles.knowledgeTabs} role="tablist">
-              <button 
-                className={`${styles.tabBtn} ${activeBottomTab === 'compare' ? styles.tabBtnActive : ''}`}
-                onClick={() => setActiveBottomTab('compare')}
-                role="tab"
-                aria-selected={activeBottomTab === 'compare'}
-              >
-                <Layers size={13} /> Comparison Matrix
-              </button>
               <button 
                 className={`${styles.tabBtn} ${activeBottomTab === 'faq' ? styles.tabBtnActive : ''}`}
                 onClick={() => setActiveBottomTab('faq')}
@@ -647,49 +638,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* TAB 1: Comparison Matrix */}
-          {activeBottomTab === 'compare' && (
-            <div className={styles.matrixTableWrap}>
-              <table className={styles.matrixTable}>
-                <thead>
-                  <tr>
-                    <th>Architecture Dimension</th>
-                    <th style={{ color: 'var(--accent)' }}>PixelPress (WASM)</th>
-                    <th>Cloud APIs (TinyPNG, etc.)</th>
-                    <th>Browser Canvas</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td className={styles.matrixFeatureCol}>Data Privacy</td>
-                    <td className={styles.matrixWinnerCell}>100% In-Memory Local Sandbox</td>
-                    <td>Sent to remote cloud servers</td>
-                    <td>Local</td>
-                  </tr>
-                  <tr>
-                    <td className={styles.matrixFeatureCol}>Compression Engine</td>
-                    <td className={styles.matrixWinnerCell}>MozJPEG, OxiPNG, WebP & AVIF</td>
-                    <td>Server-side CLI binaries</td>
-                    <td>Basic browser canvas.toBlob</td>
-                  </tr>
-                  <tr>
-                    <td className={styles.matrixFeatureCol}>Batch & File Limits</td>
-                    <td className={styles.matrixWinnerCell}>Unlimited batch drops · 100MB+</td>
-                    <td>5MB hard cap or paid subscription</td>
-                    <td>Memory-constrained</td>
-                  </tr>
-                  <tr>
-                    <td className={styles.matrixFeatureCol}>Network Latency</td>
-                    <td className={styles.matrixWinnerCell}>0.0ms (No upload or download)</td>
-                    <td>Round-trip upload delay</td>
-                    <td>0.0ms</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* TAB 2: FAQ */}
+          {/* TAB 1: FAQ */}
           {activeBottomTab === 'faq' && (
             <div className={styles.faqGrid}>
               <article className={styles.faqCard}>

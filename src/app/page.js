@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import JSZip from 'jszip';
 import { 
   Cpu, 
@@ -22,6 +22,7 @@ import styles from './page.module.css';
 import { compressImage, formatBytes } from '../utils/compressor';
 import FlickeringGrid from '../components/FlickeringGrid';
 import Tooltip from '../components/Tooltip';
+import ToastContainer from '../components/Toast';
 
 export default function Home() {
   const [images, setImages] = useState([]);
@@ -31,7 +32,24 @@ export default function Home() {
   const [isCompressing, setIsCompressing] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [hasRefusal, setHasRefusal] = useState(false);
+  const [toasts, setToasts] = useState([]);
   const fileInputRef = useRef(null);
+
+  // Toast notification dispatcher
+  const notify = useCallback((title, message, type = 'info', duration = 3500) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts(prev => [...prev, { id, title, message, type }]);
+
+    if (duration > 0) {
+      setTimeout(() => {
+        setToasts(prev => prev.filter(t => t.id !== id));
+      }, duration);
+    }
+  }, []);
+
+  const dismissToast = useCallback((id) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
 
   // Auto-compress a single image
   const compressSingle = async (imgItem, targetFormat, targetQuality, targetEffort) => {
@@ -52,6 +70,12 @@ export default function Home() {
           status: 'done',
         };
       }));
+
+      // Notify completion
+      const savedText = result.reductionPercentage > 0 
+        ? `${result.reductionPercentage.toFixed(1)}% smaller` 
+        : 'already optimal';
+      notify('Optimization complete', `${imgItem.name} is ${savedText}`, 'success');
     } catch (err) {
       setImages(prev => prev.map(item => {
         if (item.id !== imgItem.id) return item;
@@ -61,6 +85,7 @@ export default function Home() {
           error: err.message || 'Compression failed',
         };
       }));
+      notify('Compression error', `Failed to process ${imgItem.name}`, 'error');
     }
   };
 
@@ -74,6 +99,7 @@ export default function Home() {
     if (rawList.length > 0 && validFiles.length === 0) {
       setHasRefusal(true);
       setTimeout(() => setHasRefusal(false), 500);
+      notify('Unsupported format', 'Please upload PNG, JPEG, WebP, or AVIF files.', 'error');
       return;
     }
 
@@ -89,6 +115,8 @@ export default function Home() {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+
+    notify('Processing started', `Optimizing ${newItems.length} ${newItems.length === 1 ? 'file' : 'files'} in background`, 'info');
 
     // Immediately trigger WASM workers for each image
     newItems.forEach(item => {
@@ -107,6 +135,7 @@ export default function Home() {
     if (images.length === 0) return;
     setIsCompressing(true);
 
+    notify('Recomputing queue', `Applying new codec & quality parameters`, 'info');
     setImages(prev => prev.map(img => ({ ...img, status: 'compressing' })));
 
     await Promise.all(
@@ -116,10 +145,18 @@ export default function Home() {
     setIsCompressing(false);
   };
 
-  const handleDownloadAll = async () => {
-    const zip = new JSZip();
-    const completed = images.filter(img => img.status === 'done' && img.compressedBlob);
+  // Single download trigger
+  const handleDownloadSingle = (img) => {
+    notify('Download started', `Downloading ${img.name}`, 'download');
+  };
 
+  const handleDownloadAll = async () => {
+    const completed = images.filter(img => img.status === 'done' && img.compressedBlob);
+    if (completed.length === 0) return;
+
+    notify('Preparing archive', `Packaging ${completed.length} optimized files into ZIP...`, 'info', 2000);
+
+    const zip = new JSZip();
     completed.forEach(img => {
       let finalName = img.name;
       if (format !== 'original') {
@@ -136,6 +173,8 @@ export default function Home() {
     link.href = URL.createObjectURL(content);
     link.download = 'pixelpress_optimized.zip';
     link.click();
+
+    notify('Download complete', 'Saved pixelpress_optimized.zip to your downloads', 'download');
   };
 
   const handleClear = () => {
@@ -143,6 +182,7 @@ export default function Home() {
       if (img.compressedUrl) URL.revokeObjectURL(img.compressedUrl);
     });
     setImages([]);
+    notify('Queue cleared', 'Workspace reset and memory released', 'clear');
   };
 
   const removeImage = (id) => {
@@ -151,6 +191,9 @@ export default function Home() {
       URL.revokeObjectURL(item.compressedUrl);
     }
     setImages(images.filter(img => img.id !== id));
+    if (item) {
+      notify('Removed', `Removed ${item.name} from queue`, 'info', 2000);
+    }
   };
 
   // Safe numerical stats calculation - NO NaN, NO negative values
@@ -169,6 +212,9 @@ export default function Home() {
 
   return (
     <>
+      {/* Toast Notification Container */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+
       {/* 44px Sticky Header */}
       <header className={styles.header}>
         <div className={styles.headerInner}>
@@ -516,6 +562,7 @@ export default function Home() {
                       <a 
                         href={img.compressedUrl} 
                         download={img.name}
+                        onClick={() => handleDownloadSingle(img)}
                         className={`${styles.actionIconBtn} ${styles.btnActionHighlight}`}
                       >
                         <Download size={14} />

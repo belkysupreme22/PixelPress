@@ -73,20 +73,82 @@
 
 /* Main Container (Rhythm & Grid) */
 .main {
-  max-width: 1024px;
+  max-width: 1080px;
   margin: 0 auto;
-  padding: 32px 16px 80px;
+  padding: 32px 16px 96px;
   min-height: calc(100vh - 44px);
   display: flex;
   flex-direction: column;
   gap: 24px;
 }
 
+/* Stepper Bar (01 Select -> 02 Configure -> 03 Compress -> 04 Export) */
+.stepperBar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.stepItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  border: 1px solid transparent;
+  transition: all var(--transition-fast);
+}
+
+.stepItemActive {
+  background: var(--bg-surface-alt);
+  border-color: var(--border);
+}
+
+.stepItemComplete {
+  border-color: var(--accent-border);
+  background: rgba(74, 222, 128, 0.04);
+}
+
+.stepIndex {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.stepItemActive .stepIndex {
+  color: var(--accent);
+}
+
+.stepItemComplete .stepIndex {
+  color: var(--accent);
+}
+
+.stepLabel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.stepItemActive .stepLabel {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.stepItemComplete .stepLabel {
+  color: var(--text-primary);
+}
+
 /* Hero Section */
 .hero {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   padding: 16px 0 8px;
 }
 
@@ -98,21 +160,76 @@
   letter-spacing: 0.05em;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .heroTitle {
-  font-size: 32px;
-  line-height: 1.15;
+  font-size: 38px;
+  line-height: 1.1;
   color: var(--text-primary);
   margin: 0;
+  letter-spacing: -0.03em;
+}
+
+.heroTitleAccent {
+  color: var(--accent);
 }
 
 .heroDesc {
   font-size: 14px;
   color: var(--text-muted);
-  max-width: 580px;
-  line-height: 1.5;
+  max-width: 620px;
+  line-height: 1.6;
+}
+
+/* Telemetry Bento / Value Props */
+.marketingBento {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.bentoCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color var(--transition-fast);
+}
+
+.bentoCard:hover {
+  border-color: var(--border-hover);
+}
+
+.bentoHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bentoTitle {
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bentoStat {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.bentoDesc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.45;
 }
 
 /* Controls Bar (Hairline bordered panel) */
@@ -499,7 +616,19 @@
 }
 
 /* Responsive adjustments */
+@media (max-width: 768px) {
+  .stepperBar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .marketingBento {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 640px) {
+  .heroTitle {
+    font-size: 28px;
+  }
   .itemCard {
     grid-template-columns: 48px 1fr;
     grid-template-rows: auto auto;

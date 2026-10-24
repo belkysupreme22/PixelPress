@@ -112,6 +112,11 @@ export default function Home() {
   const totalSaved = Math.max(0, totalOrig - totalOpt);
   const savedPercent = totalOrig === 0 ? 0 : Math.round((totalSaved / totalOrig) * 100);
 
+  // Stepper state evaluation
+  const hasFiles = images.length > 0;
+  const hasCompressed = images.some(i => i.status === 'done');
+  const currentStep = !hasFiles ? 1 : !hasCompressed && !isCompressing ? 2 : isCompressing ? 3 : 4;
+
   return (
     <>
       {/* 44px Sticky Header */}
@@ -129,25 +134,79 @@ export default function Home() {
           <div className={styles.headerMeta}>
             <span className={styles.badge}>
               <ShieldCheck size={12} />
-              100% Local Sandbox
+              Zero telemetry · 100% device local
             </span>
           </div>
         </div>
       </header>
 
       <main className={styles.main}>
+        {/* Step-by-step progress guide */}
+        <nav aria-label="Pipeline Steps" className={styles.stepperBar}>
+          <div className={`${styles.stepItem} ${currentStep === 1 ? styles.stepItemActive : currentStep > 1 ? styles.stepItemComplete : ''}`}>
+            <span className={styles.stepIndex}>01</span>
+            <span className={styles.stepLabel}>Import</span>
+          </div>
+          <div className={`${styles.stepItem} ${currentStep === 2 ? styles.stepItemActive : currentStep > 2 ? styles.stepItemComplete : ''}`}>
+            <span className={styles.stepIndex}>02</span>
+            <span className={styles.stepLabel}>Configure</span>
+          </div>
+          <div className={`${styles.stepItem} ${currentStep === 3 ? styles.stepItemActive : currentStep > 3 ? styles.stepItemComplete : ''}`}>
+            <span className={styles.stepIndex}>03</span>
+            <span className={styles.stepLabel}>Optimize</span>
+          </div>
+          <div className={`${styles.stepItem} ${currentStep === 4 ? styles.stepItemActive : currentStep > 4 ? styles.stepItemComplete : ''}`}>
+            <span className={styles.stepIndex}>04</span>
+            <span className={styles.stepLabel}>Export</span>
+          </div>
+        </nav>
+
         {/* Hero Section */}
         <div className={styles.hero}>
           <div className={styles.heroTag}>
             <Zap size={12} color="var(--accent)" />
             MozJPEG · OxiPNG · LibWebP · LibAOM
           </div>
-          <h1 className={styles.heroTitle}>High-craft image compression.</h1>
+          <h1 className={styles.heroTitle}>
+            Real image compression. <span className={styles.heroTitleAccent}>Zero cloud.</span>
+          </h1>
           <p className={styles.heroDesc}>
-            Lossless and lossy WASM compilation running directly inside background Web Workers. 
-            No cloud APIs, no file uploads, pure browser execution.
+            Native C and Rust codecs compiled to WebAssembly. Cut payload sizes up to 80% without losing perceptual clarity or sending private files to third-party servers.
           </p>
         </div>
+
+        {/* Telemetry Bento / Value Metrics */}
+        <section className={styles.marketingBento}>
+          <article className={styles.bentoCard}>
+            <div className={styles.bentoHeader}>
+              <span className={styles.bentoTitle}><Cpu size={14} color="var(--accent)" /> MozJPEG Trellis</span>
+              <span className={styles.bentoStat}>-30%</span>
+            </div>
+            <p className={styles.bentoDesc}>
+              Custom Huffman trees and Viterbi coefficient rounding outperform basic canvas encoders.
+            </p>
+          </article>
+
+          <article className={styles.bentoCard}>
+            <div className={styles.bentoHeader}>
+              <span className={styles.bentoTitle}><Zap size={14} color="var(--accent)" /> Rust OxiPNG</span>
+              <span className={styles.bentoStat}>-65%</span>
+            </div>
+            <p className={styles.bentoDesc}>
+              Dynamic row filtering and brute-force DEFLATE optimization for lossless transparency.
+            </p>
+          </article>
+
+          <article className={styles.bentoCard}>
+            <div className={styles.bentoHeader}>
+              <span className={styles.bentoTitle}><ShieldCheck size={14} color="var(--accent)" /> Private Memory</span>
+              <span className={styles.bentoStat}>0 KB</span>
+            </div>
+            <p className={styles.bentoDesc}>
+              Runs inside sandboxed Web Workers with zero server network calls or tracking pixels.
+            </p>
+          </article>
+        </section>
 
         {/* Controls Panel */}
         <div className={styles.controlsPanel}>

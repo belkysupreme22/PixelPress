@@ -280,10 +280,10 @@ export default function Home() {
             </div>
 
             <h1 className={styles.heroTitle}>
-              Make your images up to 80% smaller without losing quality.
+              Smaller files. Zero compromise.
             </h1>
             <p className={styles.heroDesc}>
-              PixelPress shrinks your photos and graphics in seconds right inside your browser. No sign-up, no file size caps, and completely private—your images never leave your computer.
+              Compress photos and graphics up to 80% without losing detail. Fast, free, and completely private—running directly in your browser with no upload limits.
             </p>
           </div>
         </div>

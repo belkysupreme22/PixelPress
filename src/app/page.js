@@ -16,6 +16,8 @@ import {
   Lock,
   Layers,
   HelpCircle,
+  Archive,
+  Info,
   ArrowRight
 } from 'lucide-react';
 import styles from './page.module.css';
@@ -33,6 +35,7 @@ export default function Home() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [hasRefusal, setHasRefusal] = useState(false);
   const [toasts, setToasts] = useState([]);
+  const [activeBottomTab, setActiveBottomTab] = useState('compare'); // 'compare' | 'faq' | 'about'
   const fileInputRef = useRef(null);
 
   // Toast notification dispatcher
@@ -325,15 +328,13 @@ export default function Home() {
           <div className={styles.controlsRow}>
             <div className={styles.controlsGroup}>
               <div className={styles.field}>
+                <span>Target Codec:</span>
                 <Tooltip 
+                  showIcon={true}
                   label="Target Codec" 
                   content="Output format: WebP is best for modern web, MozJPEG for photos, OxiPNG for graphics with transparency, AVIF for highest compression."
                   position="top"
-                >
-                  <span style={{ cursor: 'help', borderBottom: '1px dotted var(--text-muted)' }}>
-                    Target Codec:
-                  </span>
-                </Tooltip>
+                />
                 <select 
                   className={styles.select}
                   value={format} 
@@ -353,15 +354,13 @@ export default function Home() {
 
               {format !== 'image/png' && (
                 <div className={styles.field}>
+                  <span>Fidelity:</span>
                   <Tooltip 
+                    showIcon={true}
                     label="Image Fidelity" 
                     content="Compression quality (1–100%). 75% delivers small file sizes with virtually zero noticeable loss to the human eye."
                     position="top"
-                  >
-                    <span style={{ cursor: 'help', borderBottom: '1px dotted var(--text-muted)' }}>
-                      Fidelity:
-                    </span>
-                  </Tooltip>
+                  />
                   <div className={styles.rangeWrap}>
                     <input 
                       type="range" 
@@ -379,15 +378,13 @@ export default function Home() {
               )}
 
               <div className={styles.field}>
+                <span>Passes:</span>
                 <Tooltip 
+                  showIcon={true}
                   label="Encoder Passes" 
                   content="Optimization effort (1–6). Higher passes test more DEFLATE filters and Huffman combinations to squeeze extra kilobytes."
                   position="top"
-                >
-                  <span style={{ cursor: 'help', borderBottom: '1px dotted var(--text-muted)' }}>
-                    Passes:
-                  </span>
-                </Tooltip>
+                />
                 <div className={styles.rangeWrap}>
                   <input 
                     type="range" 
@@ -405,14 +402,13 @@ export default function Home() {
             </div>
 
             <div className={styles.actionButtons}>
-              <Tooltip label="Add Images" content="Browse files from your device or drag and drop images directly into the queue." position="top">
-                <button 
-                  className={`${styles.btn} ${styles.btnPrimary}`}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload size={14} /> Stage files
-                </button>
-              </Tooltip>
+              <button 
+                className={`${styles.btn} ${styles.btnPrimary}`}
+                onClick={() => fileInputRef.current?.click()}
+                title="Browse and select images from your device"
+              >
+                <Upload size={14} /> Stage files
+              </button>
               <input 
                 type="file" 
                 ref={fileInputRef} 
@@ -422,35 +418,32 @@ export default function Home() {
                 onChange={(e) => handleFiles(e.target.files)} 
               />
               {images.length > 0 && (
-                <Tooltip label="Recompute Pipeline" content="Re-run the compression workers with the currently selected codec and quality." position="top">
-                  <button 
-                    className={`${styles.btn} ${styles.btnSecondary}`}
-                    disabled={anyCompressing}
-                    onClick={() => handleRecompressAll()}
-                  >
-                    <RefreshCw size={14} className={anyCompressing ? styles.spinnerSmall : ''} />
-                    {anyCompressing ? 'Computing...' : 'Recompute'}
-                  </button>
-                </Tooltip>
+                <button 
+                  className={`${styles.btn} ${styles.btnSecondary}`}
+                  disabled={anyCompressing}
+                  onClick={() => handleRecompressAll()}
+                  title="Re-run compression with current parameters"
+                >
+                  <RefreshCw size={14} className={anyCompressing ? styles.spinnerSmall : ''} />
+                  {anyCompressing ? 'Computing...' : 'Recompute'}
+                </button>
               )}
-              <Tooltip label="Export ZIP" content="Download all optimized images packaged together in a single ZIP file." position="top">
-                <button 
-                  className={`${styles.btn} ${allDone ? styles.btnActionHighlight : styles.btnSecondary}`}
-                  disabled={!images.some(i => i.status === 'done')}
-                  onClick={handleDownloadAll}
-                >
-                  <Download size={14} /> Export ZIP
-                </button>
-              </Tooltip>
-              <Tooltip label="Clear Queue" content="Remove all queued images and free allocated browser memory." position="top">
-                <button 
-                  className={`${styles.btn} ${styles.btnGhost}`}
-                  disabled={images.length === 0}
-                  onClick={handleClear}
-                >
-                  <Trash2 size={14} /> Clear
-                </button>
-              </Tooltip>
+              <button 
+                className={`${styles.btn} ${allDone ? styles.btnActionHighlight : styles.btnSecondary}`}
+                disabled={!images.some(i => i.status === 'done')}
+                onClick={handleDownloadAll}
+                title="Bundle all optimized images into a single ZIP archive"
+              >
+                <Download size={14} /> Export ZIP
+              </button>
+              <button 
+                className={`${styles.btn} ${styles.btnGhost}`}
+                disabled={images.length === 0}
+                onClick={handleClear}
+                title="Clear all queued images and free allocated browser memory"
+              >
+                <Trash2 size={14} /> Clear
+              </button>
             </div>
           </div>
         </div>
@@ -477,9 +470,15 @@ export default function Home() {
               <div className={styles.dropTitle}>Drop images to optimize at memory speed</div>
               <div className={styles.dropSubtitle}>Unlimited batch processing · JPEG, PNG, WebP & AVIF · Up to 100MB+ per file</div>
               <div className={styles.dropZoneBadges}>
-                <span className={styles.dropZoneBadgeItem}>⚡ Instant WASM Compute</span>
-                <span className={styles.dropZoneBadgeItem}>🔒 100% Local Sandbox</span>
-                <span className={styles.dropZoneBadgeItem}>📦 One-Click ZIP Export</span>
+                <span className={styles.dropZoneBadgeItem}>
+                  <Zap size={11} color="var(--accent)" /> Instant WASM Compute
+                </span>
+                <span className={styles.dropZoneBadgeItem}>
+                  <ShieldCheck size={11} color="var(--accent)" /> 100% Local Sandbox
+                </span>
+                <span className={styles.dropZoneBadgeItem}>
+                  <Archive size={11} color="var(--accent)" /> One-Click ZIP Export
+                </span>
               </div>
             </div>
           </div>
@@ -546,37 +545,36 @@ export default function Home() {
                     </div>
                   ) : null}
                   {img.status === 'done' && (
-                    <Tooltip label="Payload Reduction" content={`File reduced by ${img.reductionPercentage > 0 ? img.reductionPercentage.toFixed(1) + '%' : '0% (Original file preserved as it was already optimal)'}`} position="left">
-                      <span className={`${styles.reductionTag} ${img.reductionPercentage <= 0 ? styles.reductionTagNeutral : ''}`}>
-                        {img.reductionPercentage > 0 
-                          ? `${img.reductionPercentage.toFixed(1)}% smaller` 
-                          : 'Optimal (Original kept)'}
-                      </span>
-                    </Tooltip>
+                    <span 
+                      className={`${styles.reductionTag} ${img.reductionPercentage <= 0 ? styles.reductionTagNeutral : ''}`}
+                      title={`Original: ${formatBytes(img.originalSize)} → Compressed: ${formatBytes(img.compressedSize)}`}
+                    >
+                      {img.reductionPercentage > 0 
+                        ? `${img.reductionPercentage.toFixed(1)}% smaller` 
+                        : 'Optimal (Original kept)'}
+                    </span>
                   )}
                 </div>
 
                 <div className={styles.itemActions}>
                   {img.status === 'done' && (
-                    <Tooltip label="Download Image" content="Save this optimized image file to your device." position="top">
-                      <a 
-                        href={img.compressedUrl} 
-                        download={img.name}
-                        onClick={() => handleDownloadSingle(img)}
-                        className={`${styles.actionIconBtn} ${styles.btnActionHighlight}`}
-                      >
-                        <Download size={14} />
-                      </a>
-                    </Tooltip>
-                  )}
-                  <Tooltip label="Remove File" content="Remove this image from the queue." position="top">
-                    <button 
-                      className={`${styles.actionIconBtn} ${styles.actionIconBtnDanger}`}
-                      onClick={() => removeImage(img.id)}
+                    <a 
+                      href={img.compressedUrl} 
+                      download={img.name}
+                      onClick={() => handleDownloadSingle(img)}
+                      className={`${styles.actionIconBtn} ${styles.btnActionHighlight}`}
+                      title="Download this optimized image"
                     >
-                      <Trash2 size={14} />
-                    </button>
-                  </Tooltip>
+                      <Download size={14} />
+                    </a>
+                  )}
+                  <button 
+                    className={`${styles.actionIconBtn} ${styles.actionIconBtnDanger}`}
+                    onClick={() => removeImage(img.id)}
+                    title="Remove this image from queue"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               </div>
             ))}
@@ -613,51 +611,158 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Production Comparison Matrix */}
-        <section className={styles.matrixSection}>
-          <div className={styles.matrixHeader}>
-            <h2 className={styles.matrixTitle}>Engineered for performance & privacy</h2>
-            <p className={styles.matrixSubtitle}>How PixelPress compares to legacy cloud optimizers and basic browser tools.</p>
+        {/* Knowledge Base Section: Tabbed Switcher (Comparison Matrix / FAQ / About) */}
+        <section className={styles.knowledgeSection}>
+          <div className={styles.knowledgeHeader}>
+            <div className={styles.knowledgeTitleGroup}>
+              <h2 className={styles.knowledgeTitle}>Architecture & Knowledge Base</h2>
+              <p className={styles.knowledgeSubtitle}>Learn how PixelPress operates, compare codecs, and explore frequently asked questions.</p>
+            </div>
+
+            <div className={styles.knowledgeTabs} role="tablist">
+              <button 
+                className={`${styles.tabBtn} ${activeBottomTab === 'compare' ? styles.tabBtnActive : ''}`}
+                onClick={() => setActiveBottomTab('compare')}
+                role="tab"
+                aria-selected={activeBottomTab === 'compare'}
+              >
+                <Layers size={13} /> Comparison Matrix
+              </button>
+              <button 
+                className={`${styles.tabBtn} ${activeBottomTab === 'faq' ? styles.tabBtnActive : ''}`}
+                onClick={() => setActiveBottomTab('faq')}
+                role="tab"
+                aria-selected={activeBottomTab === 'faq'}
+              >
+                <HelpCircle size={13} /> FAQ
+              </button>
+              <button 
+                className={`${styles.tabBtn} ${activeBottomTab === 'about' ? styles.tabBtnActive : ''}`}
+                onClick={() => setActiveBottomTab('about')}
+                role="tab"
+                aria-selected={activeBottomTab === 'about'}
+              >
+                <ShieldCheck size={13} /> Security & Specs
+              </button>
+            </div>
           </div>
 
-          <div className={styles.matrixTableWrap}>
-            <table className={styles.matrixTable}>
-              <thead>
-                <tr>
-                  <th>Architecture Dimension</th>
-                  <th style={{ color: 'var(--accent)' }}>PixelPress (WASM)</th>
-                  <th>Cloud APIs (TinyPNG, etc.)</th>
-                  <th>Browser Canvas</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className={styles.matrixFeatureCol}>Data Privacy</td>
-                  <td className={styles.matrixWinnerCell}>100% In-Memory Local Sandbox</td>
-                  <td>Sent to remote cloud servers</td>
-                  <td>Local</td>
-                </tr>
-                <tr>
-                  <td className={styles.matrixFeatureCol}>Compression Engine</td>
-                  <td className={styles.matrixWinnerCell}>MozJPEG, OxiPNG, WebP & AVIF</td>
-                  <td>Server-side CLI binaries</td>
-                  <td>Basic browser canvas.toBlob</td>
-                </tr>
-                <tr>
-                  <td className={styles.matrixFeatureCol}>Batch & File Limits</td>
-                  <td className={styles.matrixWinnerCell}>Unlimited batch drops · 100MB+</td>
-                  <td>5MB hard cap or paid subscription</td>
-                  <td>Memory-constrained</td>
-                </tr>
-                <tr>
-                  <td className={styles.matrixFeatureCol}>Network Latency</td>
-                  <td className={styles.matrixWinnerCell}>0.0ms (No upload or download)</td>
-                  <td>Round-trip upload delay</td>
-                  <td>0.0ms</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          {/* TAB 1: Comparison Matrix */}
+          {activeBottomTab === 'compare' && (
+            <div className={styles.matrixTableWrap}>
+              <table className={styles.matrixTable}>
+                <thead>
+                  <tr>
+                    <th>Architecture Dimension</th>
+                    <th style={{ color: 'var(--accent)' }}>PixelPress (WASM)</th>
+                    <th>Cloud APIs (TinyPNG, etc.)</th>
+                    <th>Browser Canvas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className={styles.matrixFeatureCol}>Data Privacy</td>
+                    <td className={styles.matrixWinnerCell}>100% In-Memory Local Sandbox</td>
+                    <td>Sent to remote cloud servers</td>
+                    <td>Local</td>
+                  </tr>
+                  <tr>
+                    <td className={styles.matrixFeatureCol}>Compression Engine</td>
+                    <td className={styles.matrixWinnerCell}>MozJPEG, OxiPNG, WebP & AVIF</td>
+                    <td>Server-side CLI binaries</td>
+                    <td>Basic browser canvas.toBlob</td>
+                  </tr>
+                  <tr>
+                    <td className={styles.matrixFeatureCol}>Batch & File Limits</td>
+                    <td className={styles.matrixWinnerCell}>Unlimited batch drops · 100MB+</td>
+                    <td>5MB hard cap or paid subscription</td>
+                    <td>Memory-constrained</td>
+                  </tr>
+                  <tr>
+                    <td className={styles.matrixFeatureCol}>Network Latency</td>
+                    <td className={styles.matrixWinnerCell}>0.0ms (No upload or download)</td>
+                    <td>Round-trip upload delay</td>
+                    <td>0.0ms</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* TAB 2: FAQ */}
+          {activeBottomTab === 'faq' && (
+            <div className={styles.faqGrid}>
+              <article className={styles.faqCard}>
+                <div className={styles.faqQuestion}>
+                  <HelpCircle size={14} color="var(--accent)" /> How does PixelPress compress images without a server?
+                </div>
+                <div className={styles.faqAnswer}>
+                  PixelPress bundles real C and Rust image codecs (MozJPEG, OxiPNG, WebP, libaom) compiled directly into WebAssembly binaries. They execute locally inside browser Web Workers without ever making network requests.
+                </div>
+              </article>
+
+              <article className={styles.faqCard}>
+                <div className={styles.faqQuestion}>
+                  <Lock size={14} color="var(--accent)" /> Are my photos and sensitive documents completely private?
+                </div>
+                <div className={styles.faqAnswer}>
+                  Yes, 100%. Your images never leave your computer's RAM. There are zero cloud uploads, zero telemetry tracking your files, and no external APIs. When you close the tab, all memory is instantly freed.
+                </div>
+              </article>
+
+              <article className={styles.faqCard}>
+                <div className={styles.faqQuestion}>
+                  <Zap size={14} color="var(--accent)" /> Why are files smaller than standard browser canvas exports?
+                </div>
+                <div className={styles.faqAnswer}>
+                  Standard HTML5 canvas uses generic, fast compression algorithms. PixelPress uses MozJPEG with Trellis quantization (Viterbi path searching) and OxiPNG with brute-force row filtering to shave off up to 80% more bytes.
+                </div>
+              </article>
+
+              <article className={styles.faqCard}>
+                <div className={styles.faqQuestion}>
+                  <Archive size={14} color="var(--accent)" /> Are there batch or file size caps?
+                </div>
+                <div className={styles.faqAnswer}>
+                  None. Unlike commercial cloud compressors that limit you to 5MB or charge monthly subscriptions, PixelPress runs on your device's hardware, supporting large 50MB–100MB+ files and bulk ZIP downloads.
+                </div>
+              </article>
+            </div>
+          )}
+
+          {/* TAB 3: Security & Tech Specs */}
+          {activeBottomTab === 'about' && (
+            <div className={styles.aboutCard}>
+              <div className={styles.aboutGrid}>
+                <div className={styles.aboutItem}>
+                  <div className={styles.aboutItemTitle}>
+                    <ShieldCheck size={14} color="var(--accent)" /> Zero-Trust Local Architecture
+                  </div>
+                  <div className={styles.aboutItemDesc}>
+                    Designed specifically for high-security environments, legal documentation, healthcare imagery, and proprietary brand photography where third-party cloud uploads are prohibited.
+                  </div>
+                </div>
+
+                <div className={styles.aboutItem}>
+                  <div className={styles.aboutItemTitle}>
+                    <Cpu size={14} color="var(--accent)" /> Multi-Threaded Web Worker Pool
+                  </div>
+                  <div className={styles.aboutItemDesc}>
+                    Utilizes zero-copy ArrayBuffer transferables across background worker threads matching your device's CPU concurrency to keep the interface fluid at 60fps during heavy batch operations.
+                  </div>
+                </div>
+
+                <div className={styles.aboutItem}>
+                  <div className={styles.aboutItemTitle}>
+                    <FileCode size={14} color="var(--accent)" /> Native Rust & C WASM Codecs
+                  </div>
+                  <div className={styles.aboutItemDesc}>
+                    Powered by MozJPEG (Mozilla), OxiPNG (Rust), libwebp (Google), and libavif (AOMedia) with hardware SIMD acceleration where available.
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Clean Minimal Footer */}

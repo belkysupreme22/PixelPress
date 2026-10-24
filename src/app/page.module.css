@@ -773,30 +773,151 @@
   line-height: 1.5;
 }
 
-/* Production Comparison Matrix */
-.matrixSection {
+/* Knowledge Base Section (Tabs: Comparison / FAQ / About) */
+.knowledgeSection {
   border-top: 1px solid var(--border);
   padding-top: 32px;
   display: flex;
   flex-direction: column;
+  gap: 20px;
+}
+
+.knowledgeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 16px;
 }
 
-.matrixHeader {
+.knowledgeTitleGroup {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.matrixTitle {
+.knowledgeTitle {
   font-family: var(--font-display);
   font-size: 16px;
   color: var(--text-primary);
 }
 
-.matrixSubtitle {
+.knowledgeSubtitle {
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.knowledgeTabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px;
+}
+
+.tabBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.tabBtn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tabBtnActive {
+  color: var(--accent);
+  background: var(--bg-surface-alt);
+  font-weight: 500;
+}
+
+/* FAQ Accordion */
+.faqGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.faqCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color var(--transition-fast);
+}
+
+.faqCard:hover {
+  border-color: var(--border-hover);
+}
+
+.faqQuestion {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--text-primary);
+  font-weight: 500;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.faqAnswer {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  padding-left: 20px;
+}
+
+/* About / Privacy Box */
+.aboutCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.aboutGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.aboutItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.aboutItemTitle {
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.aboutItemDesc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
 }
 
 .matrixTableWrap {

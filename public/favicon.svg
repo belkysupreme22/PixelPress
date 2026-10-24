@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- FarmJS Deep Dark Squircle -->
+  <rect x="1" y="1" width="30" height="30" rx="6.5" fill="#070707" stroke="#1f1f1f" stroke-width="1.2" />
+
+  <!-- Center Compressed Emerald Pixel -->
+  <rect x="14.25" y="14.25" width="3.5" height="3.5" rx="0.75" fill="#4ade80" />
+
+  <!-- Aperture Iris Diaphragm -->
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <!-- Outer Aperture Ring -->
+    <circle cx="16" cy="16" r="9.25" fill="none" stroke="#ededed" stroke-width="1.4" />
+    
+    <!-- Alternating Aperture Blades: Emerald Green & Crisp White -->
+    <g stroke="#4ade80" stroke-width="1.35">
+      <line x1="18.31" y1="12" x2="24.05" y2="21.94" />
+      <line x1="11.38" y1="16" x2="17.12" y2="6.06" />
+      <line x1="18.31" y1="20" x2="6.83" y2="20" />
+    </g>
+    <g stroke="#ffffff" stroke-width="1.35">
+      <line x1="13.69" y1="12" x2="25.17" y2="12" />
+      <line x1="13.69" y1="20" x2="7.95" y2="10.06" />
+      <line x1="20.62" y1="16" x2="14.88" y2="25.94" />
+    </g>
+  </g>
+</svg>

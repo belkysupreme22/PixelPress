@@ -9,7 +9,7 @@ import {
   Trash2, 
   Check, 
   AlertCircle, 
-  Layers, 
+  RefreshCw, 
   Zap, 
   ShieldCheck, 
   FileCode,
@@ -28,6 +28,38 @@ export default function Home() {
   const [hasRefusal, setHasRefusal] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Auto-compress a single image
+  const compressSingle = async (imgItem, targetFormat, targetQuality, targetEffort) => {
+    try {
+      const result = await compressImage(imgItem.originalFile, {
+        format: targetFormat,
+        quality: targetQuality,
+        effort: targetEffort,
+      });
+
+      setImages(prev => prev.map(item => {
+        if (item.id !== imgItem.id) return item;
+        return {
+          ...item,
+          ...result,
+          originalSize: item.originalSize || result.originalSize || item.originalFile.size,
+          id: item.id,
+          status: 'done',
+        };
+      }));
+    } catch (err) {
+      setImages(prev => prev.map(item => {
+        if (item.id !== imgItem.id) return item;
+        return {
+          ...item,
+          status: 'error',
+          error: err.message || 'Compression failed',
+        };
+      }));
+    }
+  };
+
+  // Auto-compress on upload / drop
   const handleFiles = (files) => {
     const rawList = Array.from(files);
     const validFiles = rawList.filter(f => 
@@ -40,17 +72,23 @@ export default function Home() {
       return;
     }
 
-    const newImages = validFiles.map(f => ({
+    const newItems = validFiles.map(f => ({
       id: Math.random().toString(36).substring(2, 9),
       originalFile: f,
-      originalSize: f.size,
+      originalSize: f.size || 0,
       name: f.name,
-      status: 'pending',
+      status: 'compressing', // starts automatically!
     }));
-    setImages(prev => [...prev, ...newImages]);
+
+    setImages(prev => [...prev, ...newItems]);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+
+    // Immediately trigger WASM workers for each image
+    newItems.forEach(item => {
+      compressSingle(item, format, quality, effort);
+    });
   };
 
   const onDrop = (e) => {
@@ -59,23 +97,18 @@ export default function Home() {
     handleFiles(e.dataTransfer.files);
   };
 
-  const handleCompressAll = async () => {
+  // Recompress all images when settings change or user clicks Recompress
+  const handleRecompressAll = async (targetFmt = format, targetQ = quality, targetEff = effort) => {
+    if (images.length === 0) return;
     setIsCompressing(true);
-    const currentList = [...images];
 
-    for (let i = 0; i < currentList.length; i++) {
-      currentList[i] = { ...currentList[i], status: 'compressing' };
-      setImages([...currentList]);
+    // Set all to compressing
+    setImages(prev => prev.map(img => ({ ...img, status: 'compressing' })));
 
-      const result = await compressImage(currentList[i].originalFile, {
-        format,
-        quality,
-        effort,
-      });
+    await Promise.all(
+      images.map(img => compressSingle(img, targetFmt, targetQ, targetEff))
+    );
 
-      currentList[i] = { ...result, id: currentList[i].id };
-      setImages([...currentList]);
-    }
     setIsCompressing(false);
   };
 
@@ -97,7 +130,7 @@ export default function Home() {
     const content = await zip.generateAsync({ type: 'blob' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(content);
-    link.download = 'pixelpress_wasm_optimized.zip';
+    link.download = 'pixelpress_optimized.zip';
     link.click();
   };
 
@@ -116,15 +149,19 @@ export default function Home() {
     setImages(images.filter(img => img.id !== id));
   };
 
-  const totalOrig = images.reduce((acc, img) => acc + img.originalSize, 0);
-  const totalOpt = images.reduce((acc, img) => acc + (img.compressedSize || img.originalSize), 0);
+  // Safe numerical stats calculation - NO NaN, NO negative values
+  const totalOrig = images.reduce((acc, img) => acc + (typeof img.originalSize === 'number' && !isNaN(img.originalSize) ? img.originalSize : 0), 0);
+  const totalOpt = images.reduce((acc, img) => {
+    const optSize = typeof img.compressedSize === 'number' && !isNaN(img.compressedSize) ? img.compressedSize : img.originalSize;
+    return acc + (typeof optSize === 'number' && !isNaN(optSize) ? optSize : 0);
+  }, 0);
   const totalSaved = Math.max(0, totalOrig - totalOpt);
-  const savedPercent = totalOrig === 0 ? 0 : Math.round((totalSaved / totalOrig) * 100);
+  const savedPercent = totalOrig > 0 && totalSaved > 0 ? Math.round((totalSaved / totalOrig) * 100) : 0;
 
-  // Stepper state evaluation
-  const hasFiles = images.length > 0;
-  const hasCompressed = images.some(i => i.status === 'done');
-  const currentStep = !hasFiles ? 1 : !hasCompressed && !isCompressing ? 2 : isCompressing ? 3 : 4;
+  // Stepper flow indicator
+  const anyCompressing = images.some(i => i.status === 'compressing');
+  const allDone = images.length > 0 && images.every(i => i.status === 'done');
+  const currentStep = images.length === 0 ? 1 : anyCompressing ? 2 : 3;
 
   return (
     <>
@@ -150,23 +187,21 @@ export default function Home() {
       </header>
 
       <main className={styles.main}>
-        {/* Step-by-step progress guide */}
+        {/* Step-by-step progress guide: 01 Import -> 02 Optimize -> 03 Export */}
         <nav aria-label="Pipeline Steps" className={styles.stepperBar}>
-          <div className={`${styles.stepItem} ${currentStep === 1 ? styles.stepItemActive : currentStep > 1 ? styles.stepItemComplete : ''}`}>
+          <div className={`${styles.stepItem} ${currentStep === 1 ? styles.stepItemActive : styles.stepItemComplete}`}>
             <span className={styles.stepIndex}>01</span>
-            <span className={styles.stepLabel}>Import</span>
+            <span className={styles.stepLabel}>Import Images</span>
           </div>
           <div className={`${styles.stepItem} ${currentStep === 2 ? styles.stepItemActive : currentStep > 2 ? styles.stepItemComplete : ''}`}>
             <span className={styles.stepIndex}>02</span>
-            <span className={styles.stepLabel}>Configure</span>
+            <span className={styles.stepLabel}>
+              {anyCompressing ? 'Optimizing with WASM...' : 'Auto-Optimized'}
+            </span>
           </div>
-          <div className={`${styles.stepItem} ${currentStep === 3 ? styles.stepItemActive : currentStep > 3 ? styles.stepItemComplete : ''}`}>
+          <div className={`${styles.stepItem} ${currentStep === 3 ? styles.stepItemActive : ''}`}>
             <span className={styles.stepIndex}>03</span>
-            <span className={styles.stepLabel}>Optimize</span>
-          </div>
-          <div className={`${styles.stepItem} ${currentStep === 4 ? styles.stepItemActive : currentStep > 4 ? styles.stepItemComplete : ''}`}>
-            <span className={styles.stepIndex}>04</span>
-            <span className={styles.stepLabel}>Export</span>
+            <span className={styles.stepLabel}>Download & Export</span>
           </div>
         </nav>
 
@@ -184,10 +219,10 @@ export default function Home() {
           </div>
 
           <h1 className={styles.heroTitle}>
-            Real image compression. <span className={styles.heroTitleAccent}>Zero cloud.</span>
+            Real image compression. Zero cloud.
           </h1>
           <p className={styles.heroDesc}>
-            Native C and Rust codecs compiled to WebAssembly. Cut payload sizes up to 80% without losing perceptual clarity or sending private files to third-party servers.
+            Native C and Rust codecs compiled to WebAssembly. Drop your images to optimize instantly in memory without sending private files to third-party servers.
           </p>
         </div>
 
@@ -195,7 +230,7 @@ export default function Home() {
         <section className={styles.marketingBento}>
           <article className={styles.bentoCard}>
             <div className={styles.bentoHeader}>
-              <span className={styles.bentoTitle}><Cpu size={14} color="var(--accent)" /> MozJPEG Trellis</span>
+              <span className={styles.bentoTitle}><Cpu size={14} /> MozJPEG Trellis</span>
               <span className={styles.bentoStat}>-30%</span>
             </div>
             <p className={styles.bentoDesc}>
@@ -205,7 +240,7 @@ export default function Home() {
 
           <article className={styles.bentoCard}>
             <div className={styles.bentoHeader}>
-              <span className={styles.bentoTitle}><Zap size={14} color="var(--accent)" /> Rust OxiPNG</span>
+              <span className={styles.bentoTitle}><Zap size={14} /> Rust OxiPNG</span>
               <span className={styles.bentoStat}>-65%</span>
             </div>
             <p className={styles.bentoDesc}>
@@ -215,7 +250,7 @@ export default function Home() {
 
           <article className={styles.bentoCard}>
             <div className={styles.bentoHeader}>
-              <span className={styles.bentoTitle}><ShieldCheck size={14} color="var(--accent)" /> Private Memory</span>
+              <span className={styles.bentoTitle}><ShieldCheck size={14} /> Private Memory</span>
               <span className={styles.bentoStat}>0 KB</span>
             </div>
             <p className={styles.bentoDesc}>
@@ -233,7 +268,11 @@ export default function Home() {
                 <select 
                   className={styles.select}
                   value={format} 
-                  onChange={e => setFormat(e.target.value)}
+                  onChange={e => {
+                    const newFmt = e.target.value;
+                    setFormat(newFmt);
+                    if (images.length > 0) handleRecompressAll(newFmt, quality, effort);
+                  }}
                 >
                   <option value="original">Original (Preserve)</option>
                   <option value="image/webp">WebP (Modern)</option>
@@ -253,6 +292,8 @@ export default function Home() {
                       max="100" 
                       value={quality} 
                       onChange={e => setQuality(Number(e.target.value))}
+                      onMouseUp={() => { if (images.length > 0) handleRecompressAll(format, quality, effort); }}
+                      onTouchEnd={() => { if (images.length > 0) handleRecompressAll(format, quality, effort); }}
                       className={styles.rangeInput}
                     />
                     <span className={styles.rangeVal}>{quality}</span>
@@ -269,6 +310,8 @@ export default function Home() {
                     max="6" 
                     value={effort} 
                     onChange={e => setEffort(Number(e.target.value))}
+                    onMouseUp={() => { if (images.length > 0) handleRecompressAll(format, quality, effort); }}
+                    onTouchEnd={() => { if (images.length > 0) handleRecompressAll(format, quality, effort); }}
                     className={styles.rangeInput}
                   />
                   <span className={styles.rangeVal}>{effort}</span>
@@ -276,7 +319,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className={styles.controlsGroup}>
+            <div className={styles.actionButtons}>
               <button 
                 className={`${styles.btn} ${styles.btnPrimary}`}
                 onClick={() => fileInputRef.current?.click()}
@@ -291,15 +334,19 @@ export default function Home() {
                 className="visually-hidden" 
                 onChange={(e) => handleFiles(e.target.files)} 
               />
+              {images.length > 0 && (
+                <button 
+                  className={`${styles.btn} ${styles.btnSecondary}`}
+                  disabled={anyCompressing}
+                  onClick={() => handleRecompressAll()}
+                  title="Re-run compression with current parameters"
+                >
+                  <RefreshCw size={14} className={anyCompressing ? styles.spinnerSmall : ''} />
+                  {anyCompressing ? 'Optimizing...' : 'Recompress'}
+                </button>
+              )}
               <button 
-                className={`${styles.btn} ${styles.btnSecondary}`}
-                disabled={images.length === 0 || isCompressing}
-                onClick={handleCompressAll}
-              >
-                <Layers size={14} /> {isCompressing ? 'Compressing...' : 'Compress all'}
-              </button>
-              <button 
-                className={`${styles.btn} ${styles.btnSecondary}`}
+                className={`${styles.btn} ${allDone ? styles.btnActionHighlight : styles.btnSecondary}`}
                 disabled={!images.some(i => i.status === 'done')}
                 onClick={handleDownloadAll}
               >
@@ -326,13 +373,13 @@ export default function Home() {
             onClick={() => fileInputRef.current?.click()}
           >
             <Upload className={styles.dropIcon} />
-            <div className={styles.dropTitle}>Drop images to optimize</div>
-            <div className={styles.dropSubtitle}>JPEG, PNG, WebP, AVIF up to 100MB+ per file</div>
+            <div className={styles.dropTitle}>Drop images here to compress immediately</div>
+            <div className={styles.dropSubtitle}>Automatic WASM optimization · JPEG, PNG, WebP, AVIF</div>
           </div>
         ) : (
           <div className={styles.listContainer}>
             <div className={styles.listHeader}>
-              <span>Queue ({images.length} files)</span>
+              <span>Queue ({images.length} {images.length === 1 ? 'file' : 'files'})</span>
               <div className={styles.statsCluster}>
                 <div className={styles.statItem}>
                   <span>Original:</span>
@@ -364,9 +411,18 @@ export default function Home() {
                 <div className={styles.itemDetails}>
                   <div className={styles.itemName} title={img.name}>{img.name}</div>
                   <div className={styles.itemMeta}>
-                    <span>{img.dimensions || 'Detecting...'}</span>
+                    <span>{img.dimensions || 'Measuring...'}</span>
                     <span>·</span>
-                    <span>{img.status === 'compressing' ? 'Running WASM...' : img.durationMs ? `${img.durationMs}ms` : 'Ready'}</span>
+                    {img.status === 'compressing' ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--accent)' }}>
+                        <span className={styles.spinnerSmall} />
+                        Compressing with WASM...
+                      </span>
+                    ) : img.durationMs ? (
+                      <span>Completed in {img.durationMs}ms</span>
+                    ) : (
+                      <span>Ready</span>
+                    )}
                     {img.status === 'error' && (
                       <span style={{ color: 'var(--error)' }}>Failed: {img.error}</span>
                     )}
@@ -375,16 +431,18 @@ export default function Home() {
 
                 <div className={styles.itemTelemetry}>
                   <div className={styles.telemetryOrig}>
-                    {formatBytes(img.originalSize)}
+                    {formatBytes(img.originalSize || img.originalFile?.size || 0)}
                   </div>
-                  {img.compressedSize && (
+                  {img.compressedSize ? (
                     <div className={styles.telemetryOpt}>
                       {formatBytes(img.compressedSize)}
                     </div>
-                  )}
+                  ) : null}
                   {img.status === 'done' && (
-                    <span className={styles.reductionTag}>
-                      -{img.reductionPercentage.toFixed(1)}%
+                    <span className={`${styles.reductionTag} ${img.reductionPercentage <= 0 ? styles.reductionTagNeutral : ''}`}>
+                      {img.reductionPercentage > 0 
+                        ? `-${img.reductionPercentage.toFixed(1)}%` 
+                        : 'Optimal (Original kept)'}
                     </span>
                   )}
                 </div>
@@ -394,7 +452,7 @@ export default function Home() {
                     <a 
                       href={img.compressedUrl} 
                       download={img.name}
-                      className={styles.actionIconBtn}
+                      className={`${styles.actionIconBtn} ${styles.btnActionHighlight}`}
                       title="Download optimized file"
                     >
                       <Download size={14} />
@@ -417,7 +475,7 @@ export default function Home() {
         <section className={styles.engineStrip}>
           <div className={styles.engineCard}>
             <div className={styles.engineCardTitle}>
-              <Cpu size={14} color="var(--accent)" /> MozJPEG Engine
+              <Cpu size={14} /> MozJPEG Engine
             </div>
             <div className={styles.engineCardDesc}>
               Trellis quantization and per-image Huffman entropy optimization compiled to WebAssembly.
@@ -426,7 +484,7 @@ export default function Home() {
 
           <div className={styles.engineCard}>
             <div className={styles.engineCardTitle}>
-              <Zap size={14} color="var(--accent)" /> OxiPNG Optimizer
+              <Zap size={14} /> OxiPNG Optimizer
             </div>
             <div className={styles.engineCardDesc}>
               Multi-threaded Rust DEFLATE optimizer testing dynamic row filter combinations.
@@ -435,7 +493,7 @@ export default function Home() {
 
           <div className={styles.engineCard}>
             <div className={styles.engineCardTitle}>
-              <FileCode size={14} color="var(--accent)" /> Web Workers
+              <FileCode size={14} /> Web Workers
             </div>
             <div className={styles.engineCardDesc}>
               Zero-copy ArrayBuffer transfers running outside the main thread to ensure 60fps UI responsiveness.

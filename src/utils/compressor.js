@@ -1,8 +1,8 @@
 export function formatBytes(bytes) {
-  if (bytes === 0) return '0 B';
+  if (typeof bytes !== 'number' || isNaN(bytes) || bytes <= 0) return '0 B';
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const i = Math.min(sizes.length - 1, Math.floor(Math.log(bytes) / Math.log(k)));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
@@ -40,6 +40,7 @@ class CompressionWorkerPool {
         id,
         file,
         buffer,
+        originalSize: file.size,
         mimeType: file.type,
         targetFormat: format,
         quality,
@@ -78,13 +79,17 @@ class CompressionWorkerPool {
         let finalBlob = new Blob([e.data.buffer], { type: e.data.mimeType });
         let finalSize = e.data.compressedSize;
 
-        // Anti-negative compression fallback if same format and size grew
-        if (e.data.mimeType === task.file.type && finalSize >= task.originalSize) {
+        // Anti-negative compression: if compressed size is larger than original,
+        // and we are preserving format or same mime type, fallback to original.
+        if (finalSize >= task.originalSize && (task.targetFormat === 'original' || e.data.mimeType === task.file.type)) {
           finalBlob = task.file;
-          finalSize = task.file.size;
+          finalSize = task.originalSize;
         }
 
-        const reduction = ((task.originalSize - finalSize) / task.originalSize) * 100;
+        const rawReduction = task.originalSize > 0 
+          ? ((task.originalSize - finalSize) / task.originalSize) * 100 
+          : 0;
+        const reduction = Math.max(0, parseFloat(rawReduction.toFixed(1)));
 
         task.resolve({
           id: task.id,
@@ -93,7 +98,7 @@ class CompressionWorkerPool {
           compressedBlob: finalBlob,
           compressedSize: finalSize,
           compressedUrl: URL.createObjectURL(finalBlob),
-          reductionPercentage: Math.max(0, reduction),
+          reductionPercentage: reduction,
           name: task.file.name,
           durationMs: e.data.durationMs,
           dimensions: `${e.data.width} × ${e.data.height}`,

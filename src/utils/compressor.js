@@ -6,56 +6,143 @@ export function formatBytes(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-export async function compressImage(file, { format, quality }) {
-  try {
-    // 1. Decode the image into a bitmap
-    const bitmap = await createImageBitmap(file);
+class CompressionWorkerPool {
+  constructor(size = 2) {
+    this.size = size;
+    this.workers = [];
+    this.queue = [];
+    this.activeWorkers = new Set();
+  }
 
-    // 2. Paint it onto an offscreen canvas
-    const canvas = document.createElement('canvas');
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(bitmap, 0, 0);
+  getWorker() {
+    if (typeof window === 'undefined') return null;
 
-    // 3. Re-encode using target format & quality
-    const mimeType = format === 'original' ? file.type : format;
-    const blob = await new Promise((resolve) => {
-      canvas.toBlob(resolve, mimeType, quality / 100);
-    });
-
-    if (!blob) throw new Error("Canvas toBlob failed");
-
-    // If the re-encoded image is larger than the original AND we haven't 
-    // changed the file format, we should just use the original file.
-    // This prevents "negative compression" when uploading already-optimized files.
-    let finalBlob = blob;
-    if (mimeType === file.type && blob.size >= file.size) {
-      finalBlob = file; // Fallback to original
+    if (this.workers.length < this.size) {
+      const worker = new Worker(
+        new URL('../workers/compressor.worker.js', import.meta.url),
+        { type: 'module' }
+      );
+      this.workers.push(worker);
+      return worker;
     }
 
-    const reduction = ((file.size - finalBlob.size) / file.size) * 100;
-
-    return {
-      id: Math.random().toString(36).substring(2, 9),
-      originalFile: file,
-      originalSize: file.size,
-      compressedBlob: finalBlob,
-      compressedSize: finalBlob.size,
-      compressedUrl: URL.createObjectURL(finalBlob),
-      reductionPercentage: reduction,
-      name: file.name,
-      status: 'done' // 'pending' | 'compressing' | 'done' | 'error'
-    };
-  } catch (error) {
-    console.error("Compression failed:", error);
-    return {
-      id: Math.random().toString(36).substring(2, 9),
-      originalFile: file,
-      originalSize: file.size,
-      name: file.name,
-      status: 'error',
-      error: error.message
-    };
+    // Find an idle worker
+    const idleWorker = this.workers.find(w => !this.activeWorkers.has(w));
+    return idleWorker || null;
   }
+
+  compress(file, { format, quality = 75, effort = 4 }) {
+    return new Promise(async (resolve, reject) => {
+      const id = Math.random().toString(36).substring(2, 9);
+      const buffer = await file.arrayBuffer();
+
+      const task = {
+        id,
+        file,
+        buffer,
+        mimeType: file.type,
+        targetFormat: format,
+        quality,
+        effort,
+        resolve,
+        reject,
+      };
+
+      this.scheduleTask(task);
+    });
+  }
+
+  scheduleTask(task) {
+    const worker = this.getWorker();
+
+    if (!worker) {
+      this.queue.push(task);
+      return;
+    }
+
+    this.activeWorkers.add(worker);
+
+    const onMessage = (e) => {
+      if (e.data.id !== task.id) return;
+
+      worker.removeEventListener('message', onMessage);
+      this.activeWorkers.delete(worker);
+
+      // Process next item in queue
+      if (this.queue.length > 0) {
+        const nextTask = this.queue.shift();
+        this.scheduleTask(nextTask);
+      }
+
+      if (e.data.success) {
+        let finalBlob = new Blob([e.data.buffer], { type: e.data.mimeType });
+        let finalSize = e.data.compressedSize;
+
+        // Anti-negative compression fallback if same format and size grew
+        if (e.data.mimeType === task.file.type && finalSize >= task.originalSize) {
+          finalBlob = task.file;
+          finalSize = task.file.size;
+        }
+
+        const reduction = ((task.originalSize - finalSize) / task.originalSize) * 100;
+
+        task.resolve({
+          id: task.id,
+          originalFile: task.file,
+          originalSize: task.originalSize,
+          compressedBlob: finalBlob,
+          compressedSize: finalSize,
+          compressedUrl: URL.createObjectURL(finalBlob),
+          reductionPercentage: Math.max(0, reduction),
+          name: task.file.name,
+          durationMs: e.data.durationMs,
+          dimensions: `${e.data.width} × ${e.data.height}`,
+          status: 'done',
+        });
+      } else {
+        task.resolve({
+          id: task.id,
+          originalFile: task.file,
+          originalSize: task.file.size,
+          name: task.file.name,
+          status: 'error',
+          error: e.data.error,
+        });
+      }
+    };
+
+    worker.addEventListener('message', onMessage);
+
+    // Send task with transferable ArrayBuffer
+    worker.postMessage(
+      {
+        id: task.id,
+        buffer: task.buffer,
+        mimeType: task.mimeType,
+        targetFormat: task.targetFormat,
+        quality: task.quality,
+        effort: task.effort,
+      },
+      [task.buffer]
+    );
+  }
+}
+
+// Global worker pool singleton
+let poolInstance = null;
+
+export function getWorkerPool() {
+  if (!poolInstance && typeof window !== 'undefined') {
+    const concurrency = Math.min(4, Math.max(2, navigator.hardwareConcurrency ? Math.floor(navigator.hardwareConcurrency / 2) : 2));
+    poolInstance = new CompressionWorkerPool(concurrency);
+  }
+  return poolInstance;
+}
+
+export async function compressImage(file, options) {
+  const pool = getWorkerPool();
+  if (pool) {
+    return await pool.compress(file, options);
+  }
+  throw new Error('Worker pool unavailable in current environment');
 }

@@ -225,7 +225,7 @@ export default function Home() {
             <span className={styles.brandName}>PixelPress</span>
             <span className={`${styles.badge} ${styles.badgeSuccess}`}>
               <span className={styles.pulseDot} />
-              WASM Core
+              Instant & Private
             </span>
           </div>
 
@@ -243,17 +243,17 @@ export default function Home() {
         <nav aria-label="Pipeline Steps" className={styles.stepperBar}>
           <div className={`${styles.stepItem} ${currentStep === 1 ? styles.stepItemActive : styles.stepItemComplete}`}>
             <span className={styles.stepIndex}>01</span>
-            <span className={styles.stepLabel}>Import Images</span>
+            <span className={styles.stepLabel}>Select Images</span>
           </div>
           <div className={`${styles.stepItem} ${currentStep === 2 ? styles.stepItemActive : currentStep > 2 ? styles.stepItemComplete : ''}`}>
             <span className={styles.stepIndex}>02</span>
             <span className={styles.stepLabel}>
-              {anyCompressing ? 'Optimizing in Background...' : 'Optimized in Memory'}
+              {anyCompressing ? 'Compressing...' : 'Ready'}
             </span>
           </div>
           <div className={`${styles.stepItem} ${currentStep === 3 ? styles.stepItemActive : ''}`}>
             <span className={styles.stepIndex}>03</span>
-            <span className={styles.stepLabel}>Download & Export</span>
+            <span className={styles.stepLabel}>Download & Save</span>
           </div>
         </nav>
 
@@ -271,53 +271,47 @@ export default function Home() {
           <div className={styles.heroContent}>
             <div className={styles.heroTag}>
               <Zap size={12} color="var(--accent)" />
-              MozJPEG · OxiPNG · LibWebP · LibAOM
-            </div>
-
-            <div className={styles.terminalCommandBar}>
-              <span className={styles.terminalPrefix}>pixelpress $</span>
-              <span className={styles.terminalText}>build --codecs=all --threads=max</span>
-              <span className={styles.terminalCursor} />
+              Fast · 100% Private · No File Limits
             </div>
 
             <h1 className={styles.heroTitle}>
-              Crush image payloads. Zero server footprint.
+              Make your images up to 80% smaller without losing quality.
             </h1>
             <p className={styles.heroDesc}>
-              The high-performance compression engine engineered for modern web teams. Native Rust and C codecs compiled to WebAssembly run directly inside private browser memory — slashing payloads by up to 80% without leaking a single byte over the wire.
+              PixelPress shrinks your photos and graphics in seconds right inside your browser. No sign-up, no file size caps, and completely private—your images never leave your computer.
             </p>
           </div>
         </div>
 
-        {/* Telemetry Bento / Value Metrics */}
+        {/* Feature Highlights Bento */}
         <section className={styles.marketingBento}>
           <article className={styles.bentoCard}>
             <div className={styles.bentoHeader}>
-              <span className={styles.bentoTitle}><Cpu size={14} /> Trellis Quantization</span>
+              <span className={styles.bentoTitle}><Zap size={14} /> Crisp Image Quality</span>
               <span className={styles.bentoStat}>Up to 80% Smaller</span>
             </div>
             <p className={styles.bentoDesc}>
-              MozJPEG dynamic Viterbi coefficient paths and optimized Huffman trees squeeze file sizes browser canvas encoders can't touch.
+              Smart compression removes hidden bulk while keeping your photos sharp, clear, and vibrant for websites, emails, and social media.
             </p>
           </article>
 
           <article className={styles.bentoCard}>
             <div className={styles.bentoHeader}>
-              <span className={styles.bentoTitle}><Zap size={14} /> Zero Network Latency</span>
-              <span className={styles.bentoStat}>0.0ms Upload Time</span>
+              <span className={styles.bentoTitle}><Cpu size={14} /> Instant Results</span>
+              <span className={styles.bentoStat}>Zero Wait Time</span>
             </div>
             <p className={styles.bentoDesc}>
-              No waiting for 50MB files to upload to a remote API. Every byte is transformed in parallel across local CPU worker threads.
+              No waiting for large files to upload to slow websites. Everything compresses smoothly on your device in the background.
             </p>
           </article>
 
           <article className={styles.bentoCard}>
             <div className={styles.bentoHeader}>
-              <span className={styles.bentoTitle}><ShieldCheck size={14} /> Air-Gapped Privacy</span>
-              <span className={styles.bentoStat}>100% Client-Side</span>
+              <span className={styles.bentoTitle}><ShieldCheck size={14} /> 100% Private & Safe</span>
+              <span className={styles.bentoStat}>Your Device Only</span>
             </div>
             <p className={styles.bentoDesc}>
-              Strict zero-trust media processing. Production assets, internal mockups, and sensitive photography never leave your local device.
+              Your photos, personal documents, and designs never get uploaded to any server or cloud. Complete peace of mind.
             </p>
           </article>
         </section>
@@ -327,11 +321,11 @@ export default function Home() {
           <div className={styles.controlsRow}>
             <div className={styles.controlsGroup}>
               <div className={styles.field}>
-                <span>Target Codec:</span>
+                <span>Format:</span>
                 <Tooltip 
                   showIcon={true}
-                  label="Target Codec" 
-                  content="Output format: WebP is best for modern web, MozJPEG for photos, OxiPNG for graphics with transparency, AVIF for highest compression."
+                  label="Image Format" 
+                  content="Choose output format: WebP is best for websites, JPEG for photos, PNG for graphics with transparent backgrounds, and AVIF for smallest file size."
                   position="top"
                 />
                 <select 
@@ -343,21 +337,21 @@ export default function Home() {
                     if (images.length > 0) handleRecompressAll(newFmt, quality, effort);
                   }}
                 >
-                  <option value="original">Original (Smart Fallback)</option>
-                  <option value="image/webp">WebP (Next-Gen Standard)</option>
-                  <option value="image/jpeg">MozJPEG (Trellis Photographic)</option>
-                  <option value="image/png">OxiPNG (Lossless Rust DEFLATE)</option>
-                  <option value="image/avif">AVIF (Ultra-Density AV1)</option>
+                  <option value="original">Auto (Keep Original Format)</option>
+                  <option value="image/webp">WebP (Best for Websites)</option>
+                  <option value="image/jpeg">JPEG (Best for Photos)</option>
+                  <option value="image/png">PNG (Best for Graphics & Logos)</option>
+                  <option value="image/avif">AVIF (Smallest File Size)</option>
                 </select>
               </div>
 
               {format !== 'image/png' && (
                 <div className={styles.field}>
-                  <span>Fidelity:</span>
+                  <span>Quality:</span>
                   <Tooltip 
                     showIcon={true}
-                    label="Image Fidelity" 
-                    content="Compression quality (1–100%). 75% delivers small file sizes with virtually zero noticeable loss to the human eye."
+                    label="Image Quality" 
+                    content="Quality level (1–100%). 75% delivers small file sizes with visually perfect clarity."
                     position="top"
                   />
                   <div className={styles.rangeWrap}>
@@ -377,11 +371,11 @@ export default function Home() {
               )}
 
               <div className={styles.field}>
-                <span>Passes:</span>
+                <span>Effort:</span>
                 <Tooltip 
                   showIcon={true}
-                  label="Encoder Passes" 
-                  content="Optimization effort (1–6). Higher passes test more DEFLATE filters and Huffman combinations to squeeze extra kilobytes."
+                  label="Compression Effort" 
+                  content="Compression effort (1–6). Higher levels take slightly longer to shrink files even more."
                   position="top"
                 />
                 <div className={styles.rangeWrap}>
@@ -406,7 +400,7 @@ export default function Home() {
                 onClick={() => fileInputRef.current?.click()}
                 title="Browse and select images from your device"
               >
-                <Upload size={14} /> Stage files
+                <Upload size={14} /> Select Images
               </button>
               <input 
                 type="file" 
@@ -424,7 +418,7 @@ export default function Home() {
                   title="Re-run compression with current parameters"
                 >
                   <RefreshCw size={14} className={anyCompressing ? styles.spinnerSmall : ''} />
-                  {anyCompressing ? 'Computing...' : 'Recompute'}
+                  {anyCompressing ? 'Compressing...' : 'Recompress'}
                 </button>
               )}
               <button 
@@ -433,7 +427,7 @@ export default function Home() {
                 onClick={handleDownloadAll}
                 title="Bundle all optimized images into a single ZIP archive"
               >
-                <Download size={14} /> Export ZIP
+                <Download size={14} /> Download All (ZIP)
               </button>
               <button 
                 className={`${styles.btn} ${styles.btnGhost}`}
@@ -466,17 +460,17 @@ export default function Home() {
             </div>
             <div className={styles.dropZoneContent}>
               <Upload className={styles.dropIcon} />
-              <div className={styles.dropTitle}>Drop images to optimize at memory speed</div>
-              <div className={styles.dropSubtitle}>Unlimited batch processing · JPEG, PNG, WebP & AVIF · Up to 100MB+ per file</div>
+              <div className={styles.dropTitle}>Drop images here to compress instantly</div>
+              <div className={styles.dropSubtitle}>Supports JPG, PNG, WebP & AVIF · Unlimited batch uploads · No file size caps</div>
               <div className={styles.dropZoneBadges}>
                 <span className={styles.dropZoneBadgeItem}>
-                  <Zap size={11} color="var(--accent)" /> Instant WASM Compute
+                  <Zap size={11} color="var(--accent)" /> Instant Compression
                 </span>
                 <span className={styles.dropZoneBadgeItem}>
-                  <ShieldCheck size={11} color="var(--accent)" /> 100% Local Sandbox
+                  <ShieldCheck size={11} color="var(--accent)" /> 100% Private (No Uploads)
                 </span>
                 <span className={styles.dropZoneBadgeItem}>
-                  <Archive size={11} color="var(--accent)" /> One-Click ZIP Export
+                  <Archive size={11} color="var(--accent)" /> One-Click ZIP Download
                 </span>
               </div>
             </div>
@@ -484,7 +478,7 @@ export default function Home() {
         ) : (
           <div className={styles.listContainer}>
             <div className={styles.listHeader}>
-              <span>Optimized Images ({images.length} {images.length === 1 ? 'file' : 'files'})</span>
+              <span>Compressed Images ({images.length} {images.length === 1 ? 'file' : 'files'})</span>
               <div className={styles.statsCluster}>
                 <div className={styles.statItem}>
                   <span>Original:</span>
@@ -521,10 +515,10 @@ export default function Home() {
                     {img.status === 'compressing' ? (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--accent)' }}>
                         <span className={styles.spinnerSmall} />
-                        Computing in background worker...
+                        Compressing image...
                       </span>
                     ) : img.durationMs ? (
-                      <span>Transformed in {img.durationMs}ms</span>
+                      <span>Compressed in {img.durationMs}ms</span>
                     ) : (
                       <span>Ready</span>
                     )}
@@ -580,32 +574,32 @@ export default function Home() {
           </div>
         )}
 
-        {/* Technical Architecture Strip */}
+        {/* Feature Highlights Strip */}
         <section className={styles.engineStrip}>
           <div className={styles.engineCard}>
             <div className={styles.engineCardTitle}>
-              <Cpu size={14} /> MozJPEG Engine
+              <Zap size={14} /> Batch Processing
             </div>
             <div className={styles.engineCardDesc}>
-              Trellis quantization and per-image Huffman entropy optimization compiled to WebAssembly.
+              Drop dozens of photos at once. Compress entire photo galleries or folders in seconds without slowing down.
             </div>
           </div>
 
           <div className={styles.engineCard}>
             <div className={styles.engineCardTitle}>
-              <Zap size={14} /> OxiPNG Optimizer
+              <ShieldCheck size={14} /> 100% Private & Safe
             </div>
             <div className={styles.engineCardDesc}>
-              Multi-threaded Rust DEFLATE optimizer testing dynamic row filter combinations.
+              Your photos never leave your device. Perfect for personal memories, confidential work files, and client assets.
             </div>
           </div>
 
           <div className={styles.engineCard}>
             <div className={styles.engineCardTitle}>
-              <FileCode size={14} /> Web Workers
+              <Archive size={14} /> Free Forever
             </div>
             <div className={styles.engineCardDesc}>
-              Zero-copy ArrayBuffer transfers running outside the main thread to ensure 60fps UI responsiveness.
+              No subscriptions, no hidden watermarks, and no file size limits. High-speed compression open to everyone.
             </div>
           </div>
         </section>
@@ -614,8 +608,8 @@ export default function Home() {
         <section className={styles.knowledgeSection}>
           <div className={styles.knowledgeHeader}>
             <div className={styles.knowledgeTitleGroup}>
-              <h2 className={styles.knowledgeTitle}>Knowledge Base & Privacy</h2>
-              <p className={styles.knowledgeSubtitle}>Learn how PixelPress operates, protects your files, and optimizes images directly in your browser.</p>
+              <h2 className={styles.knowledgeTitle}>Frequently Asked Questions</h2>
+              <p className={styles.knowledgeSubtitle}>Everything you need to know about image compression, privacy, and how PixelPress runs.</p>
             </div>
 
             <div className={styles.knowledgeTabs} role="tablist">
@@ -633,7 +627,7 @@ export default function Home() {
                 role="tab"
                 aria-selected={activeBottomTab === 'about'}
               >
-                <ShieldCheck size={13} /> Security & Specs
+                <ShieldCheck size={13} /> Privacy & Security
               </button>
             </div>
           </div>
@@ -643,70 +637,70 @@ export default function Home() {
             <div className={styles.faqGrid}>
               <article className={styles.faqCard}>
                 <div className={styles.faqQuestion}>
-                  <HelpCircle size={14} color="var(--accent)" /> How does PixelPress compress images without a server?
+                  <HelpCircle size={14} color="var(--accent)" /> How does PixelPress compress images without uploading them?
                 </div>
                 <div className={styles.faqAnswer}>
-                  PixelPress bundles real C and Rust image codecs (MozJPEG, OxiPNG, WebP, libaom) compiled directly into WebAssembly binaries. They execute locally inside browser Web Workers without ever making network requests.
+                  PixelPress runs advanced compression software directly inside your web browser. Instead of sending your photos to an internet server, your computer does all the work locally. That makes it faster, unlimited, and completely safe.
                 </div>
               </article>
 
               <article className={styles.faqCard}>
                 <div className={styles.faqQuestion}>
-                  <Lock size={14} color="var(--accent)" /> Are my photos and sensitive documents completely private?
+                  <Lock size={14} color="var(--accent)" /> Are my photos and personal documents completely private?
                 </div>
                 <div className={styles.faqAnswer}>
-                  Yes, 100%. Your images never leave your computer's RAM. There are zero cloud uploads, zero telemetry tracking your files, and no external APIs. When you close the tab, all memory is instantly freed.
+                  Yes, 100%. None of your files ever leave your computer. There are no cloud uploads, no tracking, and no copies saved anywhere. When you close the tab, all memory is instantly cleared.
                 </div>
               </article>
 
               <article className={styles.faqCard}>
                 <div className={styles.faqQuestion}>
-                  <Zap size={14} color="var(--accent)" /> Why are files smaller than standard browser canvas exports?
+                  <Zap size={14} color="var(--accent)" /> Will my pictures lose quality or look blurry?
                 </div>
                 <div className={styles.faqAnswer}>
-                  Standard HTML5 canvas uses generic, fast compression algorithms. PixelPress uses MozJPEG with Trellis quantization (Viterbi path searching) and OxiPNG with brute-force row filtering to shave off up to 80% more bytes.
+                  No. PixelPress is calibrated to remove invisible data (like hidden metadata and subtle color redundancies) while preserving visual sharpness, fine details, and true colors.
                 </div>
               </article>
 
               <article className={styles.faqCard}>
                 <div className={styles.faqQuestion}>
-                  <Archive size={14} color="var(--accent)" /> Are there batch or file size caps?
+                  <Archive size={14} color="var(--accent)" /> Are there file size or upload limits?
                 </div>
                 <div className={styles.faqAnswer}>
-                  None. Unlike commercial cloud compressors that limit you to 5MB or charge monthly subscriptions, PixelPress runs on your device's hardware, supporting large 50MB–100MB+ files and bulk ZIP downloads.
+                  None at all. You can compress as many large 50MB+ photos as you need, anytime, without running into paywalls or daily upload quotas.
                 </div>
               </article>
             </div>
           )}
 
-          {/* TAB 3: Security & Tech Specs */}
+          {/* TAB 2: Privacy & Security */}
           {activeBottomTab === 'about' && (
             <div className={styles.aboutCard}>
               <div className={styles.aboutGrid}>
                 <div className={styles.aboutItem}>
                   <div className={styles.aboutItemTitle}>
-                    <ShieldCheck size={14} color="var(--accent)" /> Zero-Trust Local Architecture
+                    <ShieldCheck size={14} color="var(--accent)" /> Zero Cloud Uploads
                   </div>
                   <div className={styles.aboutItemDesc}>
-                    Designed specifically for high-security environments, legal documentation, healthcare imagery, and proprietary brand photography where third-party cloud uploads are prohibited.
+                    Your files never leave your device. Ideal for personal family albums, confidential business documents, client photography, and proprietary designs.
                   </div>
                 </div>
 
                 <div className={styles.aboutItem}>
                   <div className={styles.aboutItemTitle}>
-                    <Cpu size={14} color="var(--accent)" /> Multi-Threaded Web Worker Pool
+                    <Cpu size={14} color="var(--accent)" /> Smooth Multitasking
                   </div>
                   <div className={styles.aboutItemDesc}>
-                    Utilizes zero-copy ArrayBuffer transferables across background worker threads matching your device's CPU concurrency to keep the interface fluid at 60fps during heavy batch operations.
+                    Processing runs quietly in the background so your browser never freezes or stutters, even when handling large batches of high-resolution images.
                   </div>
                 </div>
 
                 <div className={styles.aboutItem}>
                   <div className={styles.aboutItemTitle}>
-                    <FileCode size={14} color="var(--accent)" /> Native Rust & C WASM Codecs
+                    <FileCode size={14} color="var(--accent)" /> Universal Compatibility
                   </div>
                   <div className={styles.aboutItemDesc}>
-                    Powered by MozJPEG (Mozilla), OxiPNG (Rust), libwebp (Google), and libavif (AOMedia) with hardware SIMD acceleration where available.
+                    Exports standard JPG, PNG, WebP, and AVIF images ready to share by email, post to social media, or publish to websites.
                   </div>
                 </div>
               </div>

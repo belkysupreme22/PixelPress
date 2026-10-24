@@ -13,6 +13,8 @@ import {
   Zap, 
   ShieldCheck, 
   FileCode,
+  Lock,
+  Layers,
   ArrowRight
 } from 'lucide-react';
 import styles from './page.module.css';
@@ -103,7 +105,6 @@ export default function Home() {
     if (images.length === 0) return;
     setIsCompressing(true);
 
-    // Set all to compressing
     setImages(prev => prev.map(img => ({ ...img, status: 'compressing' })));
 
     await Promise.all(
@@ -174,14 +175,14 @@ export default function Home() {
             <span className={styles.brandName}>PixelPress</span>
             <span className={`${styles.badge} ${styles.badgeSuccess}`}>
               <span className={styles.pulseDot} />
-              WASM Engine
+              WASM v2 Core
             </span>
           </div>
 
           <div className={styles.headerMeta}>
             <span className={styles.badge}>
               <ShieldCheck size={12} />
-              Zero telemetry · 100% device local
+              100% In-Memory Sandbox · Zero Cloud Uploads
             </span>
           </div>
         </div>
@@ -192,17 +193,17 @@ export default function Home() {
         <nav aria-label="Pipeline Steps" className={styles.stepperBar}>
           <div className={`${styles.stepItem} ${currentStep === 1 ? styles.stepItemActive : styles.stepItemComplete}`}>
             <span className={styles.stepIndex}>01</span>
-            <span className={styles.stepLabel}>Import Images</span>
+            <span className={styles.stepLabel}>Stage & Queue</span>
           </div>
           <div className={`${styles.stepItem} ${currentStep === 2 ? styles.stepItemActive : currentStep > 2 ? styles.stepItemComplete : ''}`}>
             <span className={styles.stepIndex}>02</span>
             <span className={styles.stepLabel}>
-              {anyCompressing ? 'Optimizing with WASM...' : 'Auto-Optimized'}
+              {anyCompressing ? 'Multi-Threaded WASM Compute...' : 'Optimized in Memory'}
             </span>
           </div>
           <div className={`${styles.stepItem} ${currentStep === 3 ? styles.stepItemActive : ''}`}>
             <span className={styles.stepIndex}>03</span>
-            <span className={styles.stepLabel}>Download & Export</span>
+            <span className={styles.stepLabel}>Instant Export</span>
           </div>
         </nav>
 
@@ -225,15 +226,15 @@ export default function Home() {
 
             <div className={styles.terminalCommandBar}>
               <span className={styles.terminalPrefix}>pixelpress $</span>
-              <span className={styles.terminalText}>wasm-opt --simd</span>
+              <span className={styles.terminalText}>build --codecs=all --threads=max</span>
               <span className={styles.terminalCursor} />
             </div>
 
             <h1 className={styles.heroTitle}>
-              Real image compression. Zero cloud.
+              Crush image payloads. Zero server footprint.
             </h1>
             <p className={styles.heroDesc}>
-              Native C and Rust codecs compiled to WebAssembly. Drop your images to optimize instantly in memory without sending private files to third-party servers.
+              The high-performance compression engine engineered for modern web teams. Native Rust and C codecs compiled to WebAssembly run directly inside private browser memory — slashing payloads by up to 80% without leaking a single byte over the wire.
             </p>
           </div>
         </div>
@@ -242,31 +243,31 @@ export default function Home() {
         <section className={styles.marketingBento}>
           <article className={styles.bentoCard}>
             <div className={styles.bentoHeader}>
-              <span className={styles.bentoTitle}><Cpu size={14} /> MozJPEG Trellis</span>
-              <span className={styles.bentoStat}>-30%</span>
+              <span className={styles.bentoTitle}><Cpu size={14} /> Trellis Quantization</span>
+              <span className={styles.bentoStat}>Up to 80% Smaller</span>
             </div>
             <p className={styles.bentoDesc}>
-              Custom Huffman trees and Viterbi coefficient rounding outperform basic canvas encoders.
+              MozJPEG dynamic Viterbi coefficient paths and optimized Huffman trees squeeze file sizes browser canvas encoders can't touch.
             </p>
           </article>
 
           <article className={styles.bentoCard}>
             <div className={styles.bentoHeader}>
-              <span className={styles.bentoTitle}><Zap size={14} /> Rust OxiPNG</span>
-              <span className={styles.bentoStat}>-65%</span>
+              <span className={styles.bentoTitle}><Zap size={14} /> Zero Network Latency</span>
+              <span className={styles.bentoStat}>0.0ms Upload Time</span>
             </div>
             <p className={styles.bentoDesc}>
-              Dynamic row filtering and brute-force DEFLATE optimization for lossless transparency.
+              No waiting for 50MB files to upload to a remote API. Every byte is transformed in parallel across local CPU worker threads.
             </p>
           </article>
 
           <article className={styles.bentoCard}>
             <div className={styles.bentoHeader}>
-              <span className={styles.bentoTitle}><ShieldCheck size={14} /> Private Memory</span>
-              <span className={styles.bentoStat}>0 KB</span>
+              <span className={styles.bentoTitle}><ShieldCheck size={14} /> Air-Gapped Privacy</span>
+              <span className={styles.bentoStat}>100% Client-Side</span>
             </div>
             <p className={styles.bentoDesc}>
-              Runs inside sandboxed Web Workers with zero server network calls or tracking pixels.
+              Strict zero-trust media processing. Production assets, internal mockups, and sensitive photography never leave your local device.
             </p>
           </article>
         </section>
@@ -276,7 +277,7 @@ export default function Home() {
           <div className={styles.controlsRow}>
             <div className={styles.controlsGroup}>
               <div className={styles.field}>
-                <span>Target:</span>
+                <span>Target Codec:</span>
                 <select 
                   className={styles.select}
                   value={format} 
@@ -286,17 +287,17 @@ export default function Home() {
                     if (images.length > 0) handleRecompressAll(newFmt, quality, effort);
                   }}
                 >
-                  <option value="original">Original (Preserve)</option>
-                  <option value="image/webp">WebP (Modern)</option>
-                  <option value="image/jpeg">MozJPEG (Trellis)</option>
-                  <option value="image/png">OxiPNG (Optimized)</option>
-                  <option value="image/avif">AVIF (Ultra small)</option>
+                  <option value="original">Original (Smart Fallback)</option>
+                  <option value="image/webp">WebP (Next-Gen Standard)</option>
+                  <option value="image/jpeg">MozJPEG (Trellis Photographic)</option>
+                  <option value="image/png">OxiPNG (Lossless Rust DEFLATE)</option>
+                  <option value="image/avif">AVIF (Ultra-Density AV1)</option>
                 </select>
               </div>
 
               {format !== 'image/png' && (
                 <div className={styles.field}>
-                  <span>Quality:</span>
+                  <span>Fidelity:</span>
                   <div className={styles.rangeWrap}>
                     <input 
                       type="range" 
@@ -308,13 +309,13 @@ export default function Home() {
                       onTouchEnd={() => { if (images.length > 0) handleRecompressAll(format, quality, effort); }}
                       className={styles.rangeInput}
                     />
-                    <span className={styles.rangeVal}>{quality}</span>
+                    <span className={styles.rangeVal}>{quality}%</span>
                   </div>
                 </div>
               )}
 
               <div className={styles.field}>
-                <span>Effort:</span>
+                <span>Passes:</span>
                 <div className={styles.rangeWrap}>
                   <input 
                     type="range" 
@@ -336,7 +337,7 @@ export default function Home() {
                 className={`${styles.btn} ${styles.btnPrimary}`}
                 onClick={() => fileInputRef.current?.click()}
               >
-                <Upload size={14} /> Add files
+                <Upload size={14} /> Stage files
               </button>
               <input 
                 type="file" 
@@ -354,7 +355,7 @@ export default function Home() {
                   title="Re-run compression with current parameters"
                 >
                   <RefreshCw size={14} className={anyCompressing ? styles.spinnerSmall : ''} />
-                  {anyCompressing ? 'Optimizing...' : 'Recompress'}
+                  {anyCompressing ? 'Computing...' : 'Recompute'}
                 </button>
               )}
               <button 
@@ -394,14 +395,19 @@ export default function Home() {
             </div>
             <div className={styles.dropZoneContent}>
               <Upload className={styles.dropIcon} />
-              <div className={styles.dropTitle}>Drop images here to compress immediately</div>
-              <div className={styles.dropSubtitle}>Automatic WASM optimization · JPEG, PNG, WebP, AVIF</div>
+              <div className={styles.dropTitle}>Drop images to optimize at memory speed</div>
+              <div className={styles.dropSubtitle}>Unlimited batch processing · JPEG, PNG, WebP & AVIF · Up to 100MB+ per file</div>
+              <div className={styles.dropZoneBadges}>
+                <span className={styles.dropZoneBadgeItem}>⚡ Instant WASM Compute</span>
+                <span className={styles.dropZoneBadgeItem}>🔒 100% Local Sandbox</span>
+                <span className={styles.dropZoneBadgeItem}>📦 One-Click ZIP Export</span>
+              </div>
             </div>
           </div>
         ) : (
           <div className={styles.listContainer}>
             <div className={styles.listHeader}>
-              <span>Queue ({images.length} {images.length === 1 ? 'file' : 'files'})</span>
+              <span>Pipeline Telemetry ({images.length} {images.length === 1 ? 'file' : 'files'})</span>
               <div className={styles.statsCluster}>
                 <div className={styles.statItem}>
                   <span>Original:</span>
@@ -414,7 +420,7 @@ export default function Home() {
                 <div className={styles.statItem}>
                   <span>Saved:</span>
                   <span className={`${styles.statNumber} ${styles.statAccent}`}>
-                    {formatBytes(totalSaved)} ({savedPercent}%)
+                    {formatBytes(totalSaved)} ({savedPercent}% Slashed)
                   </span>
                 </div>
               </div>
@@ -438,10 +444,10 @@ export default function Home() {
                     {img.status === 'compressing' ? (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--accent)' }}>
                         <span className={styles.spinnerSmall} />
-                        Compressing with WASM...
+                        Computing in WASM thread...
                       </span>
                     ) : img.durationMs ? (
-                      <span>Completed in {img.durationMs}ms</span>
+                      <span>Transformed in {img.durationMs}ms</span>
                     ) : (
                       <span>Ready</span>
                     )}
@@ -522,6 +528,69 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* Production Comparison Matrix */}
+        <section className={styles.matrixSection}>
+          <div className={styles.matrixHeader}>
+            <h2 className={styles.matrixTitle}>Engineered for performance & privacy</h2>
+            <p className={styles.matrixSubtitle}>How PixelPress compares to legacy cloud optimizers and basic browser tools.</p>
+          </div>
+
+          <div className={styles.matrixTableWrap}>
+            <table className={styles.matrixTable}>
+              <thead>
+                <tr>
+                  <th>Architecture Dimension</th>
+                  <th style={{ color: 'var(--accent)' }}>PixelPress (WASM)</th>
+                  <th>Cloud APIs (TinyPNG, etc.)</th>
+                  <th>Browser Canvas</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className={styles.matrixFeatureCol}>Data Privacy</td>
+                  <td className={styles.matrixWinnerCell}>100% In-Memory Local Sandbox</td>
+                  <td>Sent to remote cloud servers</td>
+                  <td>Local</td>
+                </tr>
+                <tr>
+                  <td className={styles.matrixFeatureCol}>Compression Engine</td>
+                  <td className={styles.matrixWinnerCell}>MozJPEG, OxiPNG, WebP & AVIF</td>
+                  <td>Server-side CLI binaries</td>
+                  <td>Basic browser canvas.toBlob</td>
+                </tr>
+                <tr>
+                  <td className={styles.matrixFeatureCol}>Batch & File Limits</td>
+                  <td className={styles.matrixWinnerCell}>Unlimited batch drops · 100MB+</td>
+                  <td>5MB hard cap or paid subscription</td>
+                  <td>Memory-constrained</td>
+                </tr>
+                <tr>
+                  <td className={styles.matrixFeatureCol}>Network Latency</td>
+                  <td className={styles.matrixWinnerCell}>0.0ms (No upload or download)</td>
+                  <td>Round-trip upload delay</td>
+                  <td>0.0ms</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* Production Footer */}
+        <footer className={styles.footer}>
+          <div className={styles.footerBrand}>
+            <span>PixelPress</span>
+            <span>·</span>
+            <span>Local-first image optimization engine</span>
+          </div>
+          <div className={styles.footerBadges}>
+            <span>Geist Typography</span>
+            <span>·</span>
+            <span>WebAssembly</span>
+            <span>·</span>
+            <span>Zero Telemetry</span>
+          </div>
+        </footer>
       </main>
     </>
   );

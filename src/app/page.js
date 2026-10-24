@@ -15,11 +15,13 @@ import {
   FileCode,
   Lock,
   Layers,
+  HelpCircle,
   ArrowRight
 } from 'lucide-react';
 import styles from './page.module.css';
 import { compressImage, formatBytes } from '../utils/compressor';
 import FlickeringGrid from '../components/FlickeringGrid';
+import Tooltip from '../components/Tooltip';
 
 export default function Home() {
   const [images, setImages] = useState([]);
@@ -175,14 +177,14 @@ export default function Home() {
             <span className={styles.brandName}>PixelPress</span>
             <span className={`${styles.badge} ${styles.badgeSuccess}`}>
               <span className={styles.pulseDot} />
-              WASM v2 Core
+              WASM Core
             </span>
           </div>
 
           <div className={styles.headerMeta}>
             <span className={styles.badge}>
               <ShieldCheck size={12} />
-              100% In-Memory Sandbox · Zero Cloud Uploads
+              100% Private · Runs in your browser
             </span>
           </div>
         </div>
@@ -193,17 +195,17 @@ export default function Home() {
         <nav aria-label="Pipeline Steps" className={styles.stepperBar}>
           <div className={`${styles.stepItem} ${currentStep === 1 ? styles.stepItemActive : styles.stepItemComplete}`}>
             <span className={styles.stepIndex}>01</span>
-            <span className={styles.stepLabel}>Stage & Queue</span>
+            <span className={styles.stepLabel}>Import Images</span>
           </div>
           <div className={`${styles.stepItem} ${currentStep === 2 ? styles.stepItemActive : currentStep > 2 ? styles.stepItemComplete : ''}`}>
             <span className={styles.stepIndex}>02</span>
             <span className={styles.stepLabel}>
-              {anyCompressing ? 'Multi-Threaded WASM Compute...' : 'Optimized in Memory'}
+              {anyCompressing ? 'Optimizing in Background...' : 'Optimized in Memory'}
             </span>
           </div>
           <div className={`${styles.stepItem} ${currentStep === 3 ? styles.stepItemActive : ''}`}>
             <span className={styles.stepIndex}>03</span>
-            <span className={styles.stepLabel}>Instant Export</span>
+            <span className={styles.stepLabel}>Download & Export</span>
           </div>
         </nav>
 
@@ -277,7 +279,15 @@ export default function Home() {
           <div className={styles.controlsRow}>
             <div className={styles.controlsGroup}>
               <div className={styles.field}>
-                <span>Target Codec:</span>
+                <Tooltip 
+                  label="Target Codec" 
+                  content="Output format: WebP is best for modern web, MozJPEG for photos, OxiPNG for graphics with transparency, AVIF for highest compression."
+                  position="top"
+                >
+                  <span style={{ cursor: 'help', borderBottom: '1px dotted var(--text-muted)' }}>
+                    Target Codec:
+                  </span>
+                </Tooltip>
                 <select 
                   className={styles.select}
                   value={format} 
@@ -297,7 +307,15 @@ export default function Home() {
 
               {format !== 'image/png' && (
                 <div className={styles.field}>
-                  <span>Fidelity:</span>
+                  <Tooltip 
+                    label="Image Fidelity" 
+                    content="Compression quality (1–100%). 75% delivers small file sizes with virtually zero noticeable loss to the human eye."
+                    position="top"
+                  >
+                    <span style={{ cursor: 'help', borderBottom: '1px dotted var(--text-muted)' }}>
+                      Fidelity:
+                    </span>
+                  </Tooltip>
                   <div className={styles.rangeWrap}>
                     <input 
                       type="range" 
@@ -315,7 +333,15 @@ export default function Home() {
               )}
 
               <div className={styles.field}>
-                <span>Passes:</span>
+                <Tooltip 
+                  label="Encoder Passes" 
+                  content="Optimization effort (1–6). Higher passes test more DEFLATE filters and Huffman combinations to squeeze extra kilobytes."
+                  position="top"
+                >
+                  <span style={{ cursor: 'help', borderBottom: '1px dotted var(--text-muted)' }}>
+                    Passes:
+                  </span>
+                </Tooltip>
                 <div className={styles.rangeWrap}>
                   <input 
                     type="range" 
@@ -333,12 +359,14 @@ export default function Home() {
             </div>
 
             <div className={styles.actionButtons}>
-              <button 
-                className={`${styles.btn} ${styles.btnPrimary}`}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Upload size={14} /> Stage files
-              </button>
+              <Tooltip label="Add Images" content="Browse files from your device or drag and drop images directly into the queue." position="top">
+                <button 
+                  className={`${styles.btn} ${styles.btnPrimary}`}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload size={14} /> Stage files
+                </button>
+              </Tooltip>
               <input 
                 type="file" 
                 ref={fileInputRef} 
@@ -348,30 +376,35 @@ export default function Home() {
                 onChange={(e) => handleFiles(e.target.files)} 
               />
               {images.length > 0 && (
-                <button 
-                  className={`${styles.btn} ${styles.btnSecondary}`}
-                  disabled={anyCompressing}
-                  onClick={() => handleRecompressAll()}
-                  title="Re-run compression with current parameters"
-                >
-                  <RefreshCw size={14} className={anyCompressing ? styles.spinnerSmall : ''} />
-                  {anyCompressing ? 'Computing...' : 'Recompute'}
-                </button>
+                <Tooltip label="Recompute Pipeline" content="Re-run the compression workers with the currently selected codec and quality." position="top">
+                  <button 
+                    className={`${styles.btn} ${styles.btnSecondary}`}
+                    disabled={anyCompressing}
+                    onClick={() => handleRecompressAll()}
+                  >
+                    <RefreshCw size={14} className={anyCompressing ? styles.spinnerSmall : ''} />
+                    {anyCompressing ? 'Computing...' : 'Recompute'}
+                  </button>
+                </Tooltip>
               )}
-              <button 
-                className={`${styles.btn} ${allDone ? styles.btnActionHighlight : styles.btnSecondary}`}
-                disabled={!images.some(i => i.status === 'done')}
-                onClick={handleDownloadAll}
-              >
-                <Download size={14} /> Export ZIP
-              </button>
-              <button 
-                className={`${styles.btn} ${styles.btnGhost}`}
-                disabled={images.length === 0}
-                onClick={handleClear}
-              >
-                <Trash2 size={14} /> Clear
-              </button>
+              <Tooltip label="Export ZIP" content="Download all optimized images packaged together in a single ZIP file." position="top">
+                <button 
+                  className={`${styles.btn} ${allDone ? styles.btnActionHighlight : styles.btnSecondary}`}
+                  disabled={!images.some(i => i.status === 'done')}
+                  onClick={handleDownloadAll}
+                >
+                  <Download size={14} /> Export ZIP
+                </button>
+              </Tooltip>
+              <Tooltip label="Clear Queue" content="Remove all queued images and free allocated browser memory." position="top">
+                <button 
+                  className={`${styles.btn} ${styles.btnGhost}`}
+                  disabled={images.length === 0}
+                  onClick={handleClear}
+                >
+                  <Trash2 size={14} /> Clear
+                </button>
+              </Tooltip>
             </div>
           </div>
         </div>
@@ -407,7 +440,7 @@ export default function Home() {
         ) : (
           <div className={styles.listContainer}>
             <div className={styles.listHeader}>
-              <span>Pipeline Telemetry ({images.length} {images.length === 1 ? 'file' : 'files'})</span>
+              <span>Optimized Images ({images.length} {images.length === 1 ? 'file' : 'files'})</span>
               <div className={styles.statsCluster}>
                 <div className={styles.statItem}>
                   <span>Original:</span>
@@ -420,7 +453,7 @@ export default function Home() {
                 <div className={styles.statItem}>
                   <span>Saved:</span>
                   <span className={`${styles.statNumber} ${styles.statAccent}`}>
-                    {formatBytes(totalSaved)} ({savedPercent}% Slashed)
+                    {formatBytes(totalSaved)} ({savedPercent}% smaller)
                   </span>
                 </div>
               </div>
@@ -444,7 +477,7 @@ export default function Home() {
                     {img.status === 'compressing' ? (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--accent)' }}>
                         <span className={styles.spinnerSmall} />
-                        Computing in WASM thread...
+                        Computing in background worker...
                       </span>
                     ) : img.durationMs ? (
                       <span>Transformed in {img.durationMs}ms</span>
@@ -467,32 +500,36 @@ export default function Home() {
                     </div>
                   ) : null}
                   {img.status === 'done' && (
-                    <span className={`${styles.reductionTag} ${img.reductionPercentage <= 0 ? styles.reductionTagNeutral : ''}`}>
-                      {img.reductionPercentage > 0 
-                        ? `-${img.reductionPercentage.toFixed(1)}%` 
-                        : 'Optimal (Original kept)'}
-                    </span>
+                    <Tooltip label="Payload Reduction" content={`File reduced by ${img.reductionPercentage > 0 ? img.reductionPercentage.toFixed(1) + '%' : '0% (Original file preserved as it was already optimal)'}`} position="left">
+                      <span className={`${styles.reductionTag} ${img.reductionPercentage <= 0 ? styles.reductionTagNeutral : ''}`}>
+                        {img.reductionPercentage > 0 
+                          ? `${img.reductionPercentage.toFixed(1)}% smaller` 
+                          : 'Optimal (Original kept)'}
+                      </span>
+                    </Tooltip>
                   )}
                 </div>
 
                 <div className={styles.itemActions}>
                   {img.status === 'done' && (
-                    <a 
-                      href={img.compressedUrl} 
-                      download={img.name}
-                      className={`${styles.actionIconBtn} ${styles.btnActionHighlight}`}
-                      title="Download optimized file"
-                    >
-                      <Download size={14} />
-                    </a>
+                    <Tooltip label="Download Image" content="Save this optimized image file to your device." position="top">
+                      <a 
+                        href={img.compressedUrl} 
+                        download={img.name}
+                        className={`${styles.actionIconBtn} ${styles.btnActionHighlight}`}
+                      >
+                        <Download size={14} />
+                      </a>
+                    </Tooltip>
                   )}
-                  <button 
-                    className={`${styles.actionIconBtn} ${styles.actionIconBtnDanger}`}
-                    onClick={() => removeImage(img.id)}
-                    title="Remove item"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  <Tooltip label="Remove File" content="Remove this image from the queue." position="top">
+                    <button 
+                      className={`${styles.actionIconBtn} ${styles.actionIconBtnDanger}`}
+                      onClick={() => removeImage(img.id)}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
             ))}
@@ -576,19 +613,17 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Production Footer */}
+        {/* Clean Minimal Footer */}
         <footer className={styles.footer}>
           <div className={styles.footerBrand}>
             <span>PixelPress</span>
             <span>·</span>
-            <span>Local-first image optimization engine</span>
+            <span>Fast, private image compression</span>
           </div>
           <div className={styles.footerBadges}>
-            <span>Geist Typography</span>
+            <span>100% In-Browser</span>
             <span>·</span>
-            <span>WebAssembly</span>
-            <span>·</span>
-            <span>Zero Telemetry</span>
+            <span>Free & Open Source</span>
           </div>
         </footer>
       </main>

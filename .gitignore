@@ -39,3 +39,24 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Design kits & reference assets
+farmjs-ui/
+farmjs-ui
+
+# Agent files, scratchpads & local AI configs
+.gemini/
+.antigravity/
+.cursor/
+.cline/
+.copilot/
+.agents/
+*.agent
+*.agent.json
+brain/
+scratch/
+transcripts/
+
+# Markdown documentation (preserve project README.md)
+*.md
+!README.md

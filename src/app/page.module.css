@@ -195,12 +195,33 @@
   color: var(--text-muted);
 }
 
-/* Hero Section - Clean monochrome craft, no radioactive green headlines */
+/* Hero Section - FarmJS layout with ambient flickering grid */
 .hero {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 16px 0 8px;
+  padding: 32px 0 24px;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.heroContent {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.heroFlickerWrap {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  width: 100%;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.85;
 }
 
 .heroTag {
@@ -421,8 +442,9 @@
   cursor: not-allowed;
 }
 
-/* Drop Zone (Terminal aesthetic) */
+/* Drop Zone with ambient sparkling simulation */
 .dropZone {
+  position: relative;
   border: 1px dashed var(--border);
   border-radius: var(--radius);
   background: var(--bg-surface);
@@ -434,7 +456,30 @@
   gap: 12px;
   text-align: center;
   cursor: pointer;
+  overflow: hidden;
   transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.dropZoneGridWrap {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.35;
+  transition: opacity var(--transition-fast);
+}
+
+.dropZone:hover .dropZoneGridWrap,
+.dropZoneDrag .dropZoneGridWrap {
+  opacity: 0.75;
+}
+
+.dropZoneContent {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 
 .dropZone:hover {

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import styles from './page.module.css';
 import { compressImage, formatBytes } from '../utils/compressor';
+import FlickeringGrid from '../components/FlickeringGrid';
 
 export default function Home() {
   const [images, setImages] = useState([]);
@@ -205,25 +206,36 @@ export default function Home() {
           </div>
         </nav>
 
-        {/* Hero Section */}
+        {/* Hero Section with FarmJS Flickering Canvas Simulation */}
         <div className={styles.hero}>
-          <div className={styles.heroTag}>
-            <Zap size={12} color="var(--accent)" />
-            MozJPEG · OxiPNG · LibWebP · LibAOM
+          <div className={styles.heroFlickerWrap}>
+            <FlickeringGrid 
+              squareSize={3}
+              gridGap={5}
+              flickerChance={0.2}
+              maxOpacity={0.22}
+            />
           </div>
 
-          <div className={styles.terminalCommandBar}>
-            <span className={styles.terminalPrefix}>pixelpress $</span>
-            <span className={styles.terminalText}>wasm-opt --simd</span>
-            <span className={styles.terminalCursor} />
-          </div>
+          <div className={styles.heroContent}>
+            <div className={styles.heroTag}>
+              <Zap size={12} color="var(--accent)" />
+              MozJPEG · OxiPNG · LibWebP · LibAOM
+            </div>
 
-          <h1 className={styles.heroTitle}>
-            Real image compression. Zero cloud.
-          </h1>
-          <p className={styles.heroDesc}>
-            Native C and Rust codecs compiled to WebAssembly. Drop your images to optimize instantly in memory without sending private files to third-party servers.
-          </p>
+            <div className={styles.terminalCommandBar}>
+              <span className={styles.terminalPrefix}>pixelpress $</span>
+              <span className={styles.terminalText}>wasm-opt --simd</span>
+              <span className={styles.terminalCursor} />
+            </div>
+
+            <h1 className={styles.heroTitle}>
+              Real image compression. Zero cloud.
+            </h1>
+            <p className={styles.heroDesc}>
+              Native C and Rust codecs compiled to WebAssembly. Drop your images to optimize instantly in memory without sending private files to third-party servers.
+            </p>
+          </div>
         </div>
 
         {/* Telemetry Bento / Value Metrics */}
@@ -372,9 +384,19 @@ export default function Home() {
             onDrop={onDrop}
             onClick={() => fileInputRef.current?.click()}
           >
-            <Upload className={styles.dropIcon} />
-            <div className={styles.dropTitle}>Drop images here to compress immediately</div>
-            <div className={styles.dropSubtitle}>Automatic WASM optimization · JPEG, PNG, WebP, AVIF</div>
+            <div className={styles.dropZoneGridWrap}>
+              <FlickeringGrid 
+                squareSize={2}
+                gridGap={6}
+                flickerChance={0.3}
+                maxOpacity={0.16}
+              />
+            </div>
+            <div className={styles.dropZoneContent}>
+              <Upload className={styles.dropIcon} />
+              <div className={styles.dropTitle}>Drop images here to compress immediately</div>
+              <div className={styles.dropSubtitle}>Automatic WASM optimization · JPEG, PNG, WebP, AVIF</div>
+            </div>
           </div>
         ) : (
           <div className={styles.listContainer}>

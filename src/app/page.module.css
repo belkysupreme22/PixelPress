@@ -69,6 +69,56 @@
   border-radius: var(--radius-pill);
   background: var(--accent);
   box-shadow: 0 0 8px var(--accent);
+  animation: farm-terminal-cursor-blink 800ms linear infinite;
+}
+
+/* Farm-style Terminal Command Prompt in Hero */
+.terminalCommandBar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  background: var(--bg-surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  width: fit-content;
+}
+
+.terminalPrefix {
+  color: var(--accent);
+}
+
+.terminalText {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  vertical-align: bottom;
+  color: var(--text-primary);
+  animation: farm-terminal-command-type 9600ms ease infinite;
+}
+
+.terminalCursor {
+  display: inline-block;
+  width: 6px;
+  height: 12px;
+  background: var(--accent);
+  vertical-align: middle;
+  animation: farm-terminal-cursor-blink 800ms linear infinite;
+}
+
+/* Refusal shake class */
+.refusalShake {
+  animation: iso-refuse 450ms ease-in-out both;
+}
+
+/* Route draw indicator */
+.routePath {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: farm-route-draw 520ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 /* Main Container (Rhythm & Grid) */

@@ -25,12 +25,21 @@ export default function Home() {
   const [effort, setEffort] = useState(4);
   const [isCompressing, setIsCompressing] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [hasRefusal, setHasRefusal] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleFiles = (files) => {
-    const validFiles = Array.from(files).filter(f => 
+    const rawList = Array.from(files);
+    const validFiles = rawList.filter(f => 
       f.type.match(/^image\/(jpeg|png|webp|avif)$/)
     );
+
+    if (rawList.length > 0 && validFiles.length === 0) {
+      setHasRefusal(true);
+      setTimeout(() => setHasRefusal(false), 500);
+      return;
+    }
+
     const newImages = validFiles.map(f => ({
       id: Math.random().toString(36).substring(2, 9),
       originalFile: f,
@@ -167,6 +176,13 @@ export default function Home() {
             <Zap size={12} color="var(--accent)" />
             MozJPEG · OxiPNG · LibWebP · LibAOM
           </div>
+
+          <div className={styles.terminalCommandBar}>
+            <span className={styles.terminalPrefix}>pixelpress $</span>
+            <span className={styles.terminalText}>wasm-opt --simd</span>
+            <span className={styles.terminalCursor} />
+          </div>
+
           <h1 className={styles.heroTitle}>
             Real image compression. <span className={styles.heroTitleAccent}>Zero cloud.</span>
           </h1>
@@ -303,7 +319,7 @@ export default function Home() {
         {/* Drop Zone */}
         {images.length === 0 ? (
           <div 
-            className={`${styles.dropZone} ${isDragOver ? styles.dropZoneDrag : ''}`}
+            className={`${styles.dropZone} ${isDragOver ? styles.dropZoneDrag : ''} ${hasRefusal ? styles.refusalShake : ''}`}
             onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
             onDragLeave={() => setIsDragOver(false)}
             onDrop={onDrop}

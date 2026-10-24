@@ -3,21 +3,26 @@
 import { useState, useRef, useCallback } from 'react';
 import JSZip from 'jszip';
 import { 
-  Cpu, 
-  Upload, 
+  Aperture,
+  Feather,
+  EyeOff,
+  Focus,
+  Shrink,
+  ImageDown,
+  Images,
+  Boxes,
+  Vault,
+  Compass,
+  Scale,
+  ScanLine,
+  PackageCheck,
   Download, 
   Trash2, 
   Check, 
   AlertCircle, 
   RefreshCw, 
-  Zap, 
-  ShieldCheck, 
-  FileCode,
-  Lock,
-  HelpCircle,
-  Archive,
-  Info,
-  ArrowRight
+  SlidersHorizontal,
+  Info
 } from 'lucide-react';
 import styles from './page.module.css';
 import { compressImage, formatBytes } from '../utils/compressor';
@@ -221,7 +226,7 @@ export default function Home() {
       <header className={styles.header}>
         <div className={styles.headerInner}>
           <div className={styles.brand}>
-            <Cpu className={styles.brandIcon} />
+            <Aperture className={styles.brandIcon} />
             <span className={styles.brandName}>PixelPress</span>
             <span className={`${styles.badge} ${styles.badgeSuccess}`}>
               <span className={styles.pulseDot} />
@@ -231,7 +236,7 @@ export default function Home() {
 
           <div className={styles.headerMeta}>
             <span className={styles.badge}>
-              <ShieldCheck size={12} />
+              <EyeOff size={12} />
               100% Private · Runs in your browser
             </span>
           </div>
@@ -270,8 +275,8 @@ export default function Home() {
 
           <div className={styles.heroContent}>
             <div className={styles.heroTag}>
-              <Zap size={12} color="var(--accent)" />
-              Fast · 100% Private · No File Limits
+              <Feather size={12} color="var(--accent)" />
+              Featherweight Files · 100% Private · No Limits
             </div>
 
             <h1 className={styles.heroTitle}>
@@ -287,7 +292,7 @@ export default function Home() {
         <section className={styles.marketingBento}>
           <article className={styles.bentoCard}>
             <div className={styles.bentoHeader}>
-              <span className={styles.bentoTitle}><Zap size={14} /> Crisp Image Quality</span>
+              <span className={styles.bentoTitle}><Focus size={14} /> Crisp Image Quality</span>
               <span className={styles.bentoStat}>Up to 80% Smaller</span>
             </div>
             <p className={styles.bentoDesc}>
@@ -297,7 +302,7 @@ export default function Home() {
 
           <article className={styles.bentoCard}>
             <div className={styles.bentoHeader}>
-              <span className={styles.bentoTitle}><Cpu size={14} /> Instant Results</span>
+              <span className={styles.bentoTitle}><Shrink size={14} /> Instant Results</span>
               <span className={styles.bentoStat}>Zero Wait Time</span>
             </div>
             <p className={styles.bentoDesc}>
@@ -307,7 +312,7 @@ export default function Home() {
 
           <article className={styles.bentoCard}>
             <div className={styles.bentoHeader}>
-              <span className={styles.bentoTitle}><ShieldCheck size={14} /> 100% Private & Safe</span>
+              <span className={styles.bentoTitle}><EyeOff size={14} /> 100% Private & Safe</span>
               <span className={styles.bentoStat}>Your Device Only</span>
             </div>
             <p className={styles.bentoDesc}>
@@ -400,7 +405,7 @@ export default function Home() {
                 onClick={() => fileInputRef.current?.click()}
                 title="Browse and select images from your device"
               >
-                <Upload size={14} /> Select Images
+                <Images size={14} /> Select Images
               </button>
               <input 
                 type="file" 
@@ -427,7 +432,7 @@ export default function Home() {
                 onClick={handleDownloadAll}
                 title="Bundle all optimized images into a single ZIP archive"
               >
-                <Download size={14} /> Download All (ZIP)
+                <PackageCheck size={14} /> Download All (ZIP)
               </button>
               <button 
                 className={`${styles.btn} ${styles.btnGhost}`}
@@ -459,18 +464,18 @@ export default function Home() {
               />
             </div>
             <div className={styles.dropZoneContent}>
-              <Upload className={styles.dropIcon} />
+              <ImageDown className={styles.dropIcon} />
               <div className={styles.dropTitle}>Drop images here to compress instantly</div>
               <div className={styles.dropSubtitle}>Supports JPG, PNG, WebP & AVIF · Unlimited batch uploads · No file size caps</div>
               <div className={styles.dropZoneBadges}>
                 <span className={styles.dropZoneBadgeItem}>
-                  <Zap size={11} color="var(--accent)" /> Instant Compression
+                  <Feather size={11} color="var(--accent)" /> Featherweight Output
                 </span>
                 <span className={styles.dropZoneBadgeItem}>
-                  <ShieldCheck size={11} color="var(--accent)" /> 100% Private (No Uploads)
+                  <EyeOff size={11} color="var(--accent)" /> 100% Private (No Uploads)
                 </span>
                 <span className={styles.dropZoneBadgeItem}>
-                  <Archive size={11} color="var(--accent)" /> One-Click ZIP Download
+                  <Boxes size={11} color="var(--accent)" /> Batch ZIP Download
                 </span>
               </div>
             </div>
@@ -578,7 +583,7 @@ export default function Home() {
         <section className={styles.engineStrip}>
           <div className={styles.engineCard}>
             <div className={styles.engineCardTitle}>
-              <Zap size={14} /> Batch Processing
+              <Boxes size={14} /> Batch Processing
             </div>
             <div className={styles.engineCardDesc}>
               Drop dozens of photos at once. Compress entire photo galleries or folders in seconds without slowing down.
@@ -587,7 +592,7 @@ export default function Home() {
 
           <div className={styles.engineCard}>
             <div className={styles.engineCardTitle}>
-              <ShieldCheck size={14} /> 100% Private & Safe
+              <Vault size={14} /> 100% Private & Safe
             </div>
             <div className={styles.engineCardDesc}>
               Your photos never leave your device. Perfect for personal memories, confidential work files, and client assets.
@@ -596,7 +601,7 @@ export default function Home() {
 
           <div className={styles.engineCard}>
             <div className={styles.engineCardTitle}>
-              <Archive size={14} /> Free Forever
+              <Scale size={14} /> Free Forever
             </div>
             <div className={styles.engineCardDesc}>
               No subscriptions, no hidden watermarks, and no file size limits. High-speed compression open to everyone.
@@ -619,7 +624,7 @@ export default function Home() {
                 role="tab"
                 aria-selected={activeBottomTab === 'faq'}
               >
-                <HelpCircle size={13} /> FAQ
+                <Compass size={13} /> FAQ
               </button>
               <button 
                 className={`${styles.tabBtn} ${activeBottomTab === 'about' ? styles.tabBtnActive : ''}`}
@@ -627,7 +632,7 @@ export default function Home() {
                 role="tab"
                 aria-selected={activeBottomTab === 'about'}
               >
-                <ShieldCheck size={13} /> Privacy & Security
+                <Vault size={13} /> Privacy & Security
               </button>
             </div>
           </div>
@@ -637,7 +642,7 @@ export default function Home() {
             <div className={styles.faqGrid}>
               <article className={styles.faqCard}>
                 <div className={styles.faqQuestion}>
-                  <HelpCircle size={14} color="var(--accent)" /> How does PixelPress compress images without uploading them?
+                  <Aperture size={14} color="var(--accent)" /> How does PixelPress compress images without uploading them?
                 </div>
                 <div className={styles.faqAnswer}>
                   PixelPress runs advanced compression software directly inside your web browser. Instead of sending your photos to an internet server, your computer does all the work locally. That makes it faster, unlimited, and completely safe.
@@ -646,7 +651,7 @@ export default function Home() {
 
               <article className={styles.faqCard}>
                 <div className={styles.faqQuestion}>
-                  <Lock size={14} color="var(--accent)" /> Are my photos and personal documents completely private?
+                  <EyeOff size={14} color="var(--accent)" /> Are my photos and personal documents completely private?
                 </div>
                 <div className={styles.faqAnswer}>
                   Yes, 100%. None of your files ever leave your computer. There are no cloud uploads, no tracking, and no copies saved anywhere. When you close the tab, all memory is instantly cleared.
@@ -655,7 +660,7 @@ export default function Home() {
 
               <article className={styles.faqCard}>
                 <div className={styles.faqQuestion}>
-                  <Zap size={14} color="var(--accent)" /> Will my pictures lose quality or look blurry?
+                  <Focus size={14} color="var(--accent)" /> Will my pictures lose quality or look blurry?
                 </div>
                 <div className={styles.faqAnswer}>
                   No. PixelPress is calibrated to remove invisible data (like hidden metadata and subtle color redundancies) while preserving visual sharpness, fine details, and true colors.
@@ -664,7 +669,7 @@ export default function Home() {
 
               <article className={styles.faqCard}>
                 <div className={styles.faqQuestion}>
-                  <Archive size={14} color="var(--accent)" /> Are there file size or upload limits?
+                  <Scale size={14} color="var(--accent)" /> Are there file size or upload limits?
                 </div>
                 <div className={styles.faqAnswer}>
                   None at all. You can compress as many large 50MB+ photos as you need, anytime, without running into paywalls or daily upload quotas.
@@ -679,7 +684,7 @@ export default function Home() {
               <div className={styles.aboutGrid}>
                 <div className={styles.aboutItem}>
                   <div className={styles.aboutItemTitle}>
-                    <ShieldCheck size={14} color="var(--accent)" /> Zero Cloud Uploads
+                    <Vault size={14} color="var(--accent)" /> Zero Cloud Uploads
                   </div>
                   <div className={styles.aboutItemDesc}>
                     Your files never leave your device. Ideal for personal family albums, confidential business documents, client photography, and proprietary designs.
@@ -688,7 +693,7 @@ export default function Home() {
 
                 <div className={styles.aboutItem}>
                   <div className={styles.aboutItemTitle}>
-                    <Cpu size={14} color="var(--accent)" /> Smooth Multitasking
+                    <ScanLine size={14} color="var(--accent)" /> Smooth Multitasking
                   </div>
                   <div className={styles.aboutItemDesc}>
                     Processing runs quietly in the background so your browser never freezes or stutters, even when handling large batches of high-resolution images.
@@ -697,7 +702,7 @@ export default function Home() {
 
                 <div className={styles.aboutItem}>
                   <div className={styles.aboutItemTitle}>
-                    <FileCode size={14} color="var(--accent)" /> Universal Compatibility
+                    <Images size={14} color="var(--accent)" /> Universal Compatibility
                   </div>
                   <div className={styles.aboutItemDesc}>
                     Exports standard JPG, PNG, WebP, and AVIF images ready to share by email, post to social media, or publish to websites.

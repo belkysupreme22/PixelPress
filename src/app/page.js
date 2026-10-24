@@ -613,8 +613,14 @@ export default function Home() {
         <section className={styles.knowledgeSection}>
           <div className={styles.knowledgeHeader}>
             <div className={styles.knowledgeTitleGroup}>
-              <h2 className={styles.knowledgeTitle}>Frequently Asked Questions</h2>
-              <p className={styles.knowledgeSubtitle}>Everything you need to know about image compression, privacy, and how PixelPress runs.</p>
+              <h2 className={styles.knowledgeTitle}>
+                {activeBottomTab === 'faq' ? 'Frequently Asked Questions' : 'Privacy & Security'}
+              </h2>
+              <p className={styles.knowledgeSubtitle}>
+                {activeBottomTab === 'faq' 
+                  ? 'Everything you need to know about image compression, quality, and file formats.' 
+                  : 'How PixelPress guarantees total confidentiality by processing images entirely on your device.'}
+              </p>
             </div>
 
             <div className={styles.knowledgeTabs} role="tablist">

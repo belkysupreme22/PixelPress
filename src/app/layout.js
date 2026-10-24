@@ -1,8 +1,8 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'PixelPress — Free Local Image Compressor',
-  description: 'Optimize PNG, JPEG & WebP images locally in your browser. No uploads, 100% private, fast batch processing.',
+  title: 'PixelPress — Local WASM Image Engine',
+  description: 'True MozJPEG, OxiPNG, WebP & AVIF compression running entirely in your browser via WebAssembly. Private, high performance.',
   icons: {
     icon: '/logo.png',
   },

@@ -819,26 +819,6 @@
   transform: translateY(-1px);
 }
 
-.telemetryCompareLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  cursor: pointer;
-  padding: 2px 0 0;
-  transition: color var(--transition-fast);
-}
-
-.telemetryCompareLink:hover {
-  color: var(--accent);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
 .actionIconBtnCompare {
   color: var(--accent);
 }

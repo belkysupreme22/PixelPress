@@ -742,17 +742,6 @@ export default function Home() {
                             : 'Optimal (Original kept)'}
                         </span>
                       )}
-                      {img.status === 'done' && (
-                        <button
-                          type="button"
-                          className={styles.telemetryCompareLink}
-                          onClick={() => setComparisonImage(img)}
-                          title="Inspect visual quality in split slider"
-                        >
-                          <SplitSquareVertical size={11} color="var(--accent)" />
-                          <span>Compare Slider</span>
-                        </button>
-                      )}
                     </div>
 
                     <div className={styles.itemActions}>

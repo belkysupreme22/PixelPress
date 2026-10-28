@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import JSZip from 'jszip';
 import { 
   Aperture,
@@ -22,6 +22,9 @@ import {
   AlertCircle, 
   RefreshCw, 
   SlidersHorizontal,
+  TerminalSquare,
+  Copy,
+  CheckCheck,
   Info
 } from 'lucide-react';
 import styles from './page.module.css';
@@ -41,6 +44,45 @@ export default function Home() {
   const [toasts, setToasts] = useState([]);
   const [activeBottomTab, setActiveBottomTab] = useState('faq'); // 'faq' | 'about'
   const fileInputRef = useRef(null);
+  const logEndRef = useRef(null);
+
+  // Compression Stats Activity Log state
+  const [logs, setLogs] = useState([
+    {
+      id: 'init-0',
+      timestamp: new Date().toLocaleTimeString(),
+      tag: 'INIT',
+      level: 'info',
+      message: 'WASM worker pool ready with multi-threaded codecs (MozJPEG, OxiPNG, WebP, AVIF)'
+    }
+  ]);
+  const [isLogExpanded, setIsLogExpanded] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  // Activity logger dispatcher
+  const addLog = useCallback((tag, message, level = 'info') => {
+    const timestamp = new Date().toLocaleTimeString();
+    const id = Math.random().toString(36).substring(2, 9);
+    setLogs(prev => [...prev.slice(-99), { id, timestamp, tag, message, level }]);
+    console.log(`%c[PixelPress ${tag}]%c ${message}`, 'color: #4ade80; font-weight: bold;', 'color: inherit;');
+  }, []);
+
+  // Auto-scroll logs to bottom
+  useEffect(() => {
+    if (isLogExpanded && logEndRef.current) {
+      logEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [logs, isLogExpanded]);
+
+  // Copy logs to clipboard
+  const handleCopyLogs = () => {
+    if (logs.length === 0) return;
+    const text = logs.map(l => `[${l.timestamp}] [${l.tag}] ${l.message}`).join('\n');
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    notify('Logs copied', 'Activity telemetry copied to clipboard', 'info', 2000);
+  };
 
   // Toast notification dispatcher
   const notify = useCallback((title, message, type = 'info', duration = 3500) => {
@@ -60,6 +102,13 @@ export default function Home() {
 
   // Auto-compress a single image
   const compressSingle = async (imgItem, targetFormat, targetQuality, targetEffort) => {
+    const origSize = imgItem.originalSize || imgItem.originalFile?.size || 0;
+    const codecName = targetFormat === 'original' 
+      ? imgItem.originalFile.type.replace('image/', '').toUpperCase() 
+      : targetFormat.replace('image/', '').toUpperCase();
+
+    addLog('CODEC', `Optimizing ${imgItem.name} (${formatBytes(origSize)}) -> ${codecName} [Q:${targetQuality}%, Effort:${targetEffort}]`, 'codec');
+
     try {
       const result = await compressImage(imgItem.originalFile, {
         format: targetFormat,
@@ -78,12 +127,20 @@ export default function Home() {
         };
       }));
 
+      // Stats Log
+      if (result.reductionPercentage > 0) {
+        addLog('DONE', `${imgItem.name}: ${formatBytes(origSize)} -> ${formatBytes(result.compressedSize)} (${result.reductionPercentage.toFixed(1)}% smaller) in ${result.durationMs}ms [${result.dimensions}]`, 'success');
+      } else {
+        addLog('OPTIMAL', `${imgItem.name}: Already optimal (${formatBytes(origSize)}); retained original file`, 'warn');
+      }
+
       // Notify completion
       const savedText = result.reductionPercentage > 0 
         ? `${result.reductionPercentage.toFixed(1)}% smaller` 
         : 'already optimal';
       notify('Optimization complete', `${imgItem.name} is ${savedText}`, 'success');
     } catch (err) {
+      addLog('ERROR', `${imgItem.name}: Compression failed - ${err.message}`, 'error');
       setImages(prev => prev.map(item => {
         if (item.id !== imgItem.id) return item;
         return {
@@ -106,6 +163,7 @@ export default function Home() {
     if (rawList.length > 0 && validFiles.length === 0) {
       setHasRefusal(true);
       setTimeout(() => setHasRefusal(false), 500);
+      addLog('WARN', 'Rejected unsupported file format (supported: JPEG, PNG, WebP, AVIF)', 'warn');
       notify('Unsupported format', 'Please upload PNG, JPEG, WebP, or AVIF files.', 'error');
       return;
     }
@@ -123,6 +181,7 @@ export default function Home() {
       fileInputRef.current.value = '';
     }
 
+    addLog('STAGE', `Staged ${newItems.length} ${newItems.length === 1 ? 'image' : 'images'} for background WASM optimization`, 'info');
     notify('Processing started', `Optimizing ${newItems.length} ${newItems.length === 1 ? 'file' : 'files'} in background`, 'info');
 
     // Immediately trigger WASM workers for each image
@@ -142,6 +201,7 @@ export default function Home() {
     if (images.length === 0) return;
     setIsCompressing(true);
 
+    addLog('CONFIG', `Recompressing ${images.length} files with Format: ${targetFmt}, Quality: ${targetQ}%, Effort: ${targetEff}`, 'codec');
     notify('Recomputing queue', `Applying new codec & quality parameters`, 'info');
     setImages(prev => prev.map(img => ({ ...img, status: 'compressing' })));
 
@@ -154,6 +214,7 @@ export default function Home() {
 
   // Single download trigger
   const handleDownloadSingle = (img) => {
+    addLog('EXPORT', `Exported ${img.name} (${formatBytes(img.compressedSize || img.originalSize)})`, 'info');
     notify('Download started', `Downloading ${img.name}`, 'download');
   };
 
@@ -181,6 +242,7 @@ export default function Home() {
     link.download = 'pixelpress_optimized.zip';
     link.click();
 
+    addLog('ARCHIVE', `Bundled ${completed.length} images into pixelpress_optimized.zip (${formatBytes(content.size)})`, 'success');
     notify('Download complete', 'Saved pixelpress_optimized.zip to your downloads', 'download');
   };
 
@@ -189,6 +251,7 @@ export default function Home() {
       if (img.compressedUrl) URL.revokeObjectURL(img.compressedUrl);
     });
     setImages([]);
+    addLog('CLEAR', 'Workspace cleared and memory released', 'info');
     notify('Queue cleared', 'Workspace reset and memory released', 'clear');
   };
 
@@ -199,6 +262,7 @@ export default function Home() {
     }
     setImages(images.filter(img => img.id !== id));
     if (item) {
+      addLog('REMOVE', `Removed ${item.name} from queue`, 'info');
       notify('Removed', `Removed ${item.name} from queue`, 'info', 2000);
     }
   };
@@ -559,6 +623,71 @@ export default function Home() {
             )}
           </section>
         </div>
+
+        {/* Live Compression Stats & Activity Logs */}
+        <section className={styles.logSection}>
+          <div className={styles.logHeader}>
+            <div className={styles.logHeaderLeft}>
+              <div className={styles.logTitle}>
+                <TerminalSquare size={13} color="var(--accent)" />
+                <span>Compression Stats & Logs</span>
+              </div>
+              <span className={styles.logCountBadge}>{logs.length} events</span>
+              {totalSaved > 0 && (
+                <span className={styles.logStatsPill}>
+                  <Check size={11} /> {formatBytes(totalSaved)} saved ({savedPercent}%)
+                </span>
+              )}
+            </div>
+
+            <div className={styles.logHeaderRight}>
+              <button 
+                className={styles.logActionBtn}
+                onClick={handleCopyLogs}
+                title="Copy activity logs to clipboard"
+              >
+                {copied ? <CheckCheck size={12} color="var(--accent)" /> : <Copy size={12} />}
+                <span>{copied ? 'Copied' : 'Copy'}</span>
+              </button>
+              <button 
+                className={styles.logActionBtn}
+                onClick={() => setLogs([])}
+                title="Clear all logs"
+              >
+                <Trash2 size={12} />
+                <span>Clear</span>
+              </button>
+              <button 
+                className={styles.logActionBtn}
+                onClick={() => setIsLogExpanded(!isLogExpanded)}
+                title={isLogExpanded ? 'Minimize logs' : 'Expand logs'}
+              >
+                <span>{isLogExpanded ? 'Minimize' : 'Expand'}</span>
+              </button>
+            </div>
+          </div>
+
+          {isLogExpanded && (
+            <div className={styles.logTerminal}>
+              {logs.length === 0 ? (
+                <div className={styles.logEmpty}>
+                  No events recorded yet. Drag and drop images to see live compression telemetry.
+                </div>
+              ) : (
+                logs.map(log => (
+                  <div key={log.id} className={styles.logLine}>
+                    <span className={styles.logTime}>{log.timestamp}</span>
+                    <span className={`${styles.logTag} ${styles[`logTag_${log.tag}`] || styles[`logTag_${log.level}`]}`}>
+                      [{log.tag}]
+                    </span>
+                    <span className={styles.logMsg}>{log.message}</span>
+                  </div>
+                ))
+              )}
+              <div ref={logEndRef} />
+            </div>
+          )}
+        </section>
 
         {/* Feature Highlights Strip */}
         <section className={styles.engineStrip}>

@@ -45,15 +45,59 @@ self.onmessage = async (e) => {
     let finalMimeType = targetFormat === 'original' ? mimeType : targetFormat;
 
     if (finalMimeType === 'image/jpeg' || finalMimeType === 'image/jpg') {
-      outputBuffer = await encodeJpeg(imageData, {
+      // JPEG has no alpha channel. If input has transparency (e.g. PNG cutout),
+      // composite transparent and semi-transparent pixels onto a clean white (#FFFFFF) background
+      // to prevent black backgrounds or dirty residual background artifacts.
+      let jpegInputData = imageData;
+      const data = imageData.data;
+      let hasAlpha = false;
+      for (let i = 3; i < data.length; i += 4) {
+        if (data[i] < 255) {
+          hasAlpha = true;
+          break;
+        }
+      }
+
+      if (hasAlpha) {
+        const opaqueData = new Uint8ClampedArray(data.length);
+        for (let i = 0; i < data.length; i += 4) {
+          const a = data[i + 3] / 255;
+          if (a === 1) {
+            opaqueData[i] = data[i];
+            opaqueData[i + 1] = data[i + 1];
+            opaqueData[i + 2] = data[i + 2];
+            opaqueData[i + 3] = 255;
+          } else if (a === 0) {
+            opaqueData[i] = 255;
+            opaqueData[i + 1] = 255;
+            opaqueData[i + 2] = 255;
+            opaqueData[i + 3] = 255;
+          } else {
+            opaqueData[i] = Math.round(data[i] * a + 255 * (1 - a));
+            opaqueData[i + 1] = Math.round(data[i + 1] * a + 255 * (1 - a));
+            opaqueData[i + 2] = Math.round(data[i + 2] * a + 255 * (1 - a));
+            opaqueData[i + 3] = 255;
+          }
+        }
+        jpegInputData = {
+          width: imageData.width,
+          height: imageData.height,
+          data: opaqueData,
+        };
+      }
+
+      outputBuffer = await encodeJpeg(jpegInputData, {
         quality: Math.round(quality),
       });
       finalMimeType = 'image/jpeg';
     } else if (finalMimeType === 'image/png') {
       const rawPng = await encodePng(imageData);
-      // Run Oxipng optimization over the encoded PNG
+      // Map effort (1-6) to OxiPNG levels (1-3).
+      // Level 2 is the official recommended sweet spot; levels 4-6 cause massive
+      // exponential CPU stalls on multi-megapixel images in WASM with 0% extra gain.
+      const oxipngLevel = effort <= 2 ? 1 : effort <= 4 ? 2 : 3;
       outputBuffer = await optimisePng(rawPng, {
-        level: Math.min(6, Math.max(1, Math.round((effort || 3)))),
+        level: oxipngLevel,
       });
       finalMimeType = 'image/png';
     } else if (finalMimeType === 'image/webp') {

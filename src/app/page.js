@@ -212,10 +212,8 @@ export default function Home() {
   const totalSaved = Math.max(0, totalOrig - totalOpt);
   const savedPercent = totalOrig > 0 && totalSaved > 0 ? Math.round((totalSaved / totalOrig) * 100) : 0;
 
-  // Stepper flow indicator
   const anyCompressing = images.some(i => i.status === 'compressing');
   const allDone = images.length > 0 && images.every(i => i.status === 'done');
-  const currentStep = images.length === 0 ? 1 : anyCompressing ? 2 : 3;
 
   return (
     <>
@@ -244,25 +242,7 @@ export default function Home() {
       </header>
 
       <main className={styles.main}>
-        {/* Step-by-step progress guide: 01 Import -> 02 Optimize -> 03 Export */}
-        <nav aria-label="Pipeline Steps" className={styles.stepperBar}>
-          <div className={`${styles.stepItem} ${currentStep === 1 ? styles.stepItemActive : styles.stepItemComplete}`}>
-            <span className={styles.stepIndex}>01</span>
-            <span className={styles.stepLabel}>Select Images</span>
-          </div>
-          <div className={`${styles.stepItem} ${currentStep === 2 ? styles.stepItemActive : currentStep > 2 ? styles.stepItemComplete : ''}`}>
-            <span className={styles.stepIndex}>02</span>
-            <span className={styles.stepLabel}>
-              {anyCompressing ? 'Compressing...' : 'Ready'}
-            </span>
-          </div>
-          <div className={`${styles.stepItem} ${currentStep === 3 ? styles.stepItemActive : ''}`}>
-            <span className={styles.stepIndex}>03</span>
-            <span className={styles.stepLabel}>Download & Save</span>
-          </div>
-        </nav>
-
-        {/* Hero Section with FarmJS Flickering Canvas Simulation */}
+        {/* Centered Hero Section with Ambient Flickering Canvas */}
         <div className={styles.hero}>
           <div className={styles.heroFlickerWrap}>
             <FlickeringGrid 
@@ -282,57 +262,31 @@ export default function Home() {
             <h1 className={styles.heroTitle}>
               Smaller files. Zero compromise.
             </h1>
-            <p className={styles.heroDesc}>
-              Compress photos and graphics up to 80% without losing detail. Fast, free, and completely private—running directly in your browser with no upload limits.
-            </p>
           </div>
         </div>
 
-        {/* Feature Highlights Bento */}
-        <section className={styles.marketingBento}>
-          <article className={styles.bentoCard}>
-            <div className={styles.bentoHeader}>
-              <span className={styles.bentoTitle}><Focus size={14} /> Crisp Image Quality</span>
-              <span className={styles.bentoStat}>Up to 80% Smaller</span>
+        {/* 2-Column Workspace: Left = Controllers, Right = Image Input & Gallery */}
+        <div className={styles.workspaceGrid}>
+          {/* Left Column: Controllers */}
+          <aside className={styles.controlsPanel}>
+            <div className={styles.controlsHeader}>
+              <SlidersHorizontal size={14} color="var(--accent)" />
+              <span>Compression Settings</span>
             </div>
-            <p className={styles.bentoDesc}>
-              Smart compression removes hidden bulk while keeping your photos sharp, clear, and vibrant for websites, emails, and social media.
-            </p>
-          </article>
 
-          <article className={styles.bentoCard}>
-            <div className={styles.bentoHeader}>
-              <span className={styles.bentoTitle}><Shrink size={14} /> Instant Results</span>
-              <span className={styles.bentoStat}>Zero Wait Time</span>
-            </div>
-            <p className={styles.bentoDesc}>
-              No waiting for large files to upload to slow websites. Everything compresses smoothly on your device in the background.
-            </p>
-          </article>
-
-          <article className={styles.bentoCard}>
-            <div className={styles.bentoHeader}>
-              <span className={styles.bentoTitle}><EyeOff size={14} /> 100% Private & Safe</span>
-              <span className={styles.bentoStat}>Your Device Only</span>
-            </div>
-            <p className={styles.bentoDesc}>
-              Your photos, personal documents, and designs never get uploaded to any server or cloud. Complete peace of mind.
-            </p>
-          </article>
-        </section>
-
-        {/* Controls Panel */}
-        <div className={styles.controlsPanel}>
-          <div className={styles.controlsRow}>
             <div className={styles.controlsGroup}>
               <div className={styles.field}>
-                <span>Format:</span>
-                <Tooltip 
-                  showIcon={true}
-                  label="Image Format" 
-                  content="Choose output format: WebP is best for websites, JPEG for photos, PNG for graphics with transparent backgrounds, and AVIF for smallest file size."
-                  position="top"
-                />
+                <div className={styles.fieldHeader}>
+                  <span className={styles.fieldLabelWrap}>
+                    <span>Format:</span>
+                    <Tooltip 
+                      showIcon={true}
+                      label="Image Format" 
+                      content="Choose output format: WebP is best for websites, JPEG for photos, PNG for graphics with transparent backgrounds, and AVIF for smallest file size."
+                      position="top"
+                    />
+                  </span>
+                </div>
                 <select 
                   className={styles.select}
                   value={format} 
@@ -352,13 +306,18 @@ export default function Home() {
 
               {format !== 'image/png' && (
                 <div className={styles.field}>
-                  <span>Quality:</span>
-                  <Tooltip 
-                    showIcon={true}
-                    label="Image Quality" 
-                    content="Quality level (1–100%). 75% delivers small file sizes with visually perfect clarity."
-                    position="top"
-                  />
+                  <div className={styles.fieldHeader}>
+                    <span className={styles.fieldLabelWrap}>
+                      <span>Quality:</span>
+                      <Tooltip 
+                        showIcon={true}
+                        label="Image Quality" 
+                        content="Quality level (1–100%). 75% delivers small file sizes with visually perfect clarity."
+                        position="top"
+                      />
+                    </span>
+                    <span className={styles.fieldValue}>{quality}%</span>
+                  </div>
                   <div className={styles.rangeWrap}>
                     <input 
                       type="range" 
@@ -370,19 +329,23 @@ export default function Home() {
                       onTouchEnd={() => { if (images.length > 0) handleRecompressAll(format, quality, effort); }}
                       className={styles.rangeInput}
                     />
-                    <span className={styles.rangeVal}>{quality}%</span>
                   </div>
                 </div>
               )}
 
               <div className={styles.field}>
-                <span>Effort:</span>
-                <Tooltip 
-                  showIcon={true}
-                  label="Compression Effort" 
-                  content="Compression effort (1–6). Higher levels take slightly longer to shrink files even more."
-                  position="top"
-                />
+                <div className={styles.fieldHeader}>
+                  <span className={styles.fieldLabelWrap}>
+                    <span>Effort:</span>
+                    <Tooltip 
+                      showIcon={true}
+                      label="Compression Effort" 
+                      content="Compression effort (1–6). Higher levels take slightly longer to shrink files even more."
+                      position="top"
+                    />
+                  </span>
+                  <span className={styles.fieldValue}>{effort}</span>
+                </div>
                 <div className={styles.rangeWrap}>
                   <input 
                     type="range" 
@@ -394,14 +357,13 @@ export default function Home() {
                     onTouchEnd={() => { if (images.length > 0) handleRecompressAll(format, quality, effort); }}
                     className={styles.rangeInput}
                   />
-                  <span className={styles.rangeVal}>{effort}</span>
                 </div>
               </div>
             </div>
 
             <div className={styles.actionButtons}>
               <button 
-                className={`${styles.btn} ${styles.btnPrimary}`}
+                className={`${styles.btn} ${styles.btnPrimary} ${styles.btnFullWidth}`}
                 onClick={() => fileInputRef.current?.click()}
                 title="Browse and select images from your device"
               >
@@ -417,7 +379,7 @@ export default function Home() {
               />
               {images.length > 0 && (
                 <button 
-                  className={`${styles.btn} ${styles.btnSecondary}`}
+                  className={`${styles.btn} ${styles.btnSecondary} ${styles.btnFullWidth}`}
                   disabled={anyCompressing}
                   onClick={() => handleRecompressAll()}
                   title="Re-run compression with current parameters"
@@ -426,158 +388,177 @@ export default function Home() {
                   {anyCompressing ? 'Compressing...' : 'Recompress'}
                 </button>
               )}
-              <button 
-                className={`${styles.btn} ${allDone ? styles.btnActionHighlight : styles.btnSecondary}`}
-                disabled={!images.some(i => i.status === 'done')}
-                onClick={handleDownloadAll}
-                title="Bundle all optimized images into a single ZIP archive"
+              {images.length > 0 && (
+                <button 
+                  className={`${styles.btn} ${allDone ? styles.btnActionHighlight : styles.btnSecondary} ${styles.btnFullWidth}`}
+                  disabled={!images.some(i => i.status === 'done')}
+                  onClick={handleDownloadAll}
+                  title="Bundle all optimized images into a single ZIP archive"
+                >
+                  <PackageCheck size={14} /> Download All (ZIP)
+                </button>
+              )}
+              {images.length > 0 && (
+                <button 
+                  className={`${styles.btn} ${styles.btnGhost} ${styles.btnFullWidth}`}
+                  disabled={images.length === 0}
+                  onClick={handleClear}
+                  title="Clear all queued images and free allocated browser memory"
+                >
+                  <Trash2 size={14} /> Clear Queue
+                </button>
+              )}
+            </div>
+          </aside>
+
+          {/* Right Column: Image Input & Gallery */}
+          <section className={styles.stageArea}>
+            {images.length === 0 ? (
+              <div 
+                className={`${styles.dropZone} ${isDragOver ? styles.dropZoneDrag : ''} ${hasRefusal ? styles.refusalShake : ''}`}
+                onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
+                onDragLeave={() => setIsDragOver(false)}
+                onDrop={onDrop}
+                onClick={() => fileInputRef.current?.click()}
               >
-                <PackageCheck size={14} /> Download All (ZIP)
-              </button>
-              <button 
-                className={`${styles.btn} ${styles.btnGhost}`}
-                disabled={images.length === 0}
-                onClick={handleClear}
-                title="Clear all queued images and free allocated browser memory"
-              >
-                <Trash2 size={14} /> Clear
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Drop Zone */}
-        {images.length === 0 ? (
-          <div 
-            className={`${styles.dropZone} ${isDragOver ? styles.dropZoneDrag : ''} ${hasRefusal ? styles.refusalShake : ''}`}
-            onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
-            onDragLeave={() => setIsDragOver(false)}
-            onDrop={onDrop}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <div className={styles.dropZoneGridWrap}>
-              <FlickeringGrid 
-                squareSize={2}
-                gridGap={6}
-                flickerChance={0.3}
-                maxOpacity={0.16}
-              />
-            </div>
-            <div className={styles.dropZoneContent}>
-              <ImageDown className={styles.dropIcon} />
-              <div className={styles.dropTitle}>Drop images here to compress instantly</div>
-              <div className={styles.dropSubtitle}>Supports JPG, PNG, WebP & AVIF · Unlimited batch uploads · No file size caps</div>
-              <div className={styles.dropZoneBadges}>
-                <span className={styles.dropZoneBadgeItem}>
-                  <Feather size={11} color="var(--accent)" /> Featherweight Output
-                </span>
-                <span className={styles.dropZoneBadgeItem}>
-                  <EyeOff size={11} color="var(--accent)" /> 100% Private (No Uploads)
-                </span>
-                <span className={styles.dropZoneBadgeItem}>
-                  <Boxes size={11} color="var(--accent)" /> Batch ZIP Download
-                </span>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className={styles.listContainer}>
-            <div className={styles.listHeader}>
-              <span>Compressed Images ({images.length} {images.length === 1 ? 'file' : 'files'})</span>
-              <div className={styles.statsCluster}>
-                <div className={styles.statItem}>
-                  <span>Original:</span>
-                  <span className={styles.statNumber}>{formatBytes(totalOrig)}</span>
+                <div className={styles.dropZoneGridWrap}>
+                  <FlickeringGrid 
+                    squareSize={2}
+                    gridGap={6}
+                    flickerChance={0.3}
+                    maxOpacity={0.16}
+                  />
                 </div>
-                <div className={styles.statItem}>
-                  <span>Optimized:</span>
-                  <span className={styles.statNumber}>{formatBytes(totalOpt)}</span>
-                </div>
-                <div className={styles.statItem}>
-                  <span>Saved:</span>
-                  <span className={`${styles.statNumber} ${styles.statAccent}`}>
-                    {formatBytes(totalSaved)} ({savedPercent}% smaller)
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {images.map(img => (
-              <div key={img.id} className={styles.itemCard}>
-                <div className={styles.thumbWrap}>
-                  {img.compressedUrl ? (
-                    <img src={img.compressedUrl} alt="preview" />
-                  ) : (
-                    <img src={URL.createObjectURL(img.originalFile)} alt="preview" />
-                  )}
-                </div>
-
-                <div className={styles.itemDetails}>
-                  <div className={styles.itemName} title={img.name}>{img.name}</div>
-                  <div className={styles.itemMeta}>
-                    <span>{img.dimensions || 'Measuring...'}</span>
-                    <span>·</span>
-                    {img.status === 'compressing' ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--accent)' }}>
-                        <span className={styles.spinnerSmall} />
-                        Compressing image...
-                      </span>
-                    ) : img.durationMs ? (
-                      <span>Compressed in {img.durationMs}ms</span>
-                    ) : (
-                      <span>Ready</span>
-                    )}
-                    {img.status === 'error' && (
-                      <span style={{ color: 'var(--error)' }}>Failed: {img.error}</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className={styles.itemTelemetry}>
-                  <div className={styles.telemetryOrig}>
-                    {formatBytes(img.originalSize || img.originalFile?.size || 0)}
-                  </div>
-                  {img.compressedSize ? (
-                    <div className={styles.telemetryOpt}>
-                      {formatBytes(img.compressedSize)}
-                    </div>
-                  ) : null}
-                  {img.status === 'done' && (
-                    <span 
-                      className={`${styles.reductionTag} ${img.reductionPercentage <= 0 ? styles.reductionTagNeutral : ''}`}
-                      title={`Original: ${formatBytes(img.originalSize)} → Compressed: ${formatBytes(img.compressedSize)}`}
-                    >
-                      {img.reductionPercentage > 0 
-                        ? `${img.reductionPercentage.toFixed(1)}% smaller` 
-                        : 'Optimal (Original kept)'}
+                <div className={styles.dropZoneContent}>
+                  <ImageDown className={styles.dropIcon} />
+                  <div className={styles.dropTitle}>Drop images here to compress instantly</div>
+                  <div className={styles.dropSubtitle}>Supports JPG, PNG, WebP & AVIF · Unlimited batch uploads · No file size caps</div>
+                  <div className={styles.dropZoneBadges}>
+                    <span className={styles.dropZoneBadgeItem}>
+                      <Feather size={11} color="var(--accent)" /> Featherweight Output
                     </span>
-                  )}
-                </div>
-
-                <div className={styles.itemActions}>
-                  {img.status === 'done' && (
-                    <a 
-                      href={img.compressedUrl} 
-                      download={img.name}
-                      onClick={() => handleDownloadSingle(img)}
-                      className={`${styles.actionIconBtn} ${styles.btnActionHighlight}`}
-                      title="Download this optimized image"
-                    >
-                      <Download size={14} />
-                    </a>
-                  )}
-                  <button 
-                    className={`${styles.actionIconBtn} ${styles.actionIconBtnDanger}`}
-                    onClick={() => removeImage(img.id)}
-                    title="Remove this image from queue"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                    <span className={styles.dropZoneBadgeItem}>
+                      <EyeOff size={11} color="var(--accent)" /> 100% Private (No Uploads)
+                    </span>
+                    <span className={styles.dropZoneBadgeItem}>
+                      <Boxes size={11} color="var(--accent)" /> Batch ZIP Download
+                    </span>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+            ) : (
+              <div className={styles.listContainer}>
+                {/* Compact drop banner to add more images */}
+                <div 
+                  className={`${styles.stageAddMore} ${isDragOver ? styles.dropZoneDrag : ''}`}
+                  onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
+                  onDragLeave={() => setIsDragOver(false)}
+                  onDrop={onDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Click or drop more images to add to the queue"
+                >
+                  <ImageDown size={14} color="var(--accent)" />
+                  <span>Drop more images here, or click to add files</span>
+                </div>
+
+                <div className={styles.listHeader}>
+                  <span>Compressed Images ({images.length} {images.length === 1 ? 'file' : 'files'})</span>
+                  <div className={styles.statsCluster}>
+                    <div className={styles.statItem}>
+                      <span>Original:</span>
+                      <span className={styles.statNumber}>{formatBytes(totalOrig)}</span>
+                    </div>
+                    <div className={styles.statItem}>
+                      <span>Optimized:</span>
+                      <span className={styles.statNumber}>{formatBytes(totalOpt)}</span>
+                    </div>
+                    <div className={styles.statItem}>
+                      <span>Saved:</span>
+                      <span className={`${styles.statNumber} ${styles.statAccent}`}>
+                        {formatBytes(totalSaved)} ({savedPercent}% smaller)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {images.map(img => (
+                  <div key={img.id} className={styles.itemCard}>
+                    <div className={styles.thumbWrap}>
+                      {img.compressedUrl ? (
+                        <img src={img.compressedUrl} alt="preview" />
+                      ) : (
+                        <img src={URL.createObjectURL(img.originalFile)} alt="preview" />
+                      )}
+                    </div>
+
+                    <div className={styles.itemDetails}>
+                      <div className={styles.itemName} title={img.name}>{img.name}</div>
+                      <div className={styles.itemMeta}>
+                        <span>{img.dimensions || 'Measuring...'}</span>
+                        <span>·</span>
+                        {img.status === 'compressing' ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--accent)' }}>
+                            <span className={styles.spinnerSmall} />
+                            Compressing image...
+                          </span>
+                        ) : img.durationMs ? (
+                          <span>Compressed in {img.durationMs}ms</span>
+                        ) : (
+                          <span>Ready</span>
+                        )}
+                        {img.status === 'error' && (
+                          <span style={{ color: 'var(--error)' }}>Failed: {img.error}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className={styles.itemTelemetry}>
+                      <div className={styles.telemetryOrig}>
+                        {formatBytes(img.originalSize || img.originalFile?.size || 0)}
+                      </div>
+                      {img.compressedSize ? (
+                        <div className={styles.telemetryOpt}>
+                          {formatBytes(img.compressedSize)}
+                        </div>
+                      ) : null}
+                      {img.status === 'done' && (
+                        <span 
+                          className={`${styles.reductionTag} ${img.reductionPercentage <= 0 ? styles.reductionTagNeutral : ''}`}
+                          title={`Original: ${formatBytes(img.originalSize)} → Compressed: ${formatBytes(img.compressedSize)}`}
+                        >
+                          {img.reductionPercentage > 0 
+                            ? `${img.reductionPercentage.toFixed(1)}% smaller` 
+                            : 'Optimal (Original kept)'}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className={styles.itemActions}>
+                      {img.status === 'done' && (
+                        <a 
+                          href={img.compressedUrl} 
+                          download={img.name}
+                          onClick={() => handleDownloadSingle(img)}
+                          className={`${styles.actionIconBtn} ${styles.btnActionHighlight}`}
+                          title="Download this optimized image"
+                        >
+                          <Download size={14} />
+                        </a>
+                      )}
+                      <button 
+                        className={`${styles.actionIconBtn} ${styles.actionIconBtnDanger}`}
+                        onClick={() => removeImage(img.id)}
+                        title="Remove this image from queue"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
 
         {/* Feature Highlights Strip */}
         <section className={styles.engineStrip}>

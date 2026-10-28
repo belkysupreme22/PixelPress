@@ -51,9 +51,12 @@ self.onmessage = async (e) => {
       finalMimeType = 'image/jpeg';
     } else if (finalMimeType === 'image/png') {
       const rawPng = await encodePng(imageData);
-      // Run Oxipng optimization over the encoded PNG
+      // Map effort (1-6) to OxiPNG levels (1-3).
+      // Level 2 is the official recommended sweet spot; levels 4-6 cause massive
+      // exponential CPU stalls on multi-megapixel images in WASM with 0% extra gain.
+      const oxipngLevel = effort <= 2 ? 1 : effort <= 4 ? 2 : 3;
       outputBuffer = await optimisePng(rawPng, {
-        level: Math.min(6, Math.max(1, Math.round((effort || 3)))),
+        level: oxipngLevel,
       });
       finalMimeType = 'image/png';
     } else if (finalMimeType === 'image/webp') {

@@ -366,6 +366,12 @@ export default function Home() {
                   <option value="image/png">PNG (Best for Graphics & Logos)</option>
                   <option value="image/avif">AVIF (Smallest File Size)</option>
                 </select>
+                {format === 'image/png' && (
+                  <div className={styles.formatTip}>
+                    <Info size={11} color="var(--accent)" />
+                    <span>PNG is lossless. For 80–90% smaller photos, switch to WebP or JPEG.</span>
+                  </div>
+                )}
               </div>
 
               {format !== 'image/png' && (

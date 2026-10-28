@@ -22,9 +22,6 @@ import {
   AlertCircle, 
   RefreshCw, 
   SlidersHorizontal,
-  TerminalSquare,
-  Copy,
-  CheckCheck,
   Info
 } from 'lucide-react';
 import styles from './page.module.css';
@@ -44,45 +41,26 @@ export default function Home() {
   const [toasts, setToasts] = useState([]);
   const [activeBottomTab, setActiveBottomTab] = useState('faq'); // 'faq' | 'about'
   const fileInputRef = useRef(null);
-  const logEndRef = useRef(null);
 
-  // Compression Stats Activity Log state
-  const [logs, setLogs] = useState([
-    {
-      id: 'init-0',
-      timestamp: new Date().toLocaleTimeString(),
-      tag: 'INIT',
-      level: 'info',
-      message: 'WASM worker pool ready with multi-threaded codecs (MozJPEG, OxiPNG, WebP, AVIF)'
-    }
-  ]);
-  const [isLogExpanded, setIsLogExpanded] = useState(true);
-  const [copied, setCopied] = useState(false);
-
-  // Activity logger dispatcher
+  // Activity logger dispatcher - streams directly to VS Code terminal via dev server API route
   const addLog = useCallback((tag, message, level = 'info') => {
     const timestamp = new Date().toLocaleTimeString();
-    const id = Math.random().toString(36).substring(2, 9);
-    setLogs(prev => [...prev.slice(-99), { id, timestamp, tag, message, level }]);
+    // 1. Browser console
     console.log(`%c[PixelPress ${tag}]%c ${message}`, 'color: #4ade80; font-weight: bold;', 'color: inherit;');
+    // 2. Stream to VS Code terminal (Node.js dev server stdout)
+    if (typeof window !== 'undefined') {
+      fetch('/api/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timestamp, tag, message, level }),
+      }).catch(() => {});
+    }
   }, []);
 
-  // Auto-scroll logs to bottom
+  // Stream init signal on mount
   useEffect(() => {
-    if (isLogExpanded && logEndRef.current) {
-      logEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [logs, isLogExpanded]);
-
-  // Copy logs to clipboard
-  const handleCopyLogs = () => {
-    if (logs.length === 0) return;
-    const text = logs.map(l => `[${l.timestamp}] [${l.tag}] ${l.message}`).join('\n');
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    notify('Logs copied', 'Activity telemetry copied to clipboard', 'info', 2000);
-  };
+    addLog('INIT', 'WASM worker pool ready with multi-threaded codecs (MozJPEG, OxiPNG, WebP, AVIF)', 'info');
+  }, [addLog]);
 
   // Toast notification dispatcher
   const notify = useCallback((title, message, type = 'info', duration = 3500) => {
@@ -267,6 +245,14 @@ export default function Home() {
     }
   };
 
+  const getOutputFilename = (originalName, targetFormat) => {
+    if (targetFormat === 'original') return originalName;
+    const ext = targetFormat === 'image/jpeg' ? '.jpg' : 
+                targetFormat === 'image/png' ? '.png' : 
+                targetFormat === 'image/webp' ? '.webp' : '.avif';
+    return originalName.replace(/\.[^/.]+$/, "") + ext;
+  };
+
   // Safe numerical stats calculation - NO NaN, NO negative values
   const totalOrig = images.reduce((acc, img) => acc + (typeof img.originalSize === 'number' && !isNaN(img.originalSize) ? img.originalSize : 0), 0);
   const totalOpt = images.reduce((acc, img) => {
@@ -370,6 +356,12 @@ export default function Home() {
                   <div className={styles.formatTip}>
                     <Info size={11} color="var(--accent)" />
                     <span>PNG is lossless. For 80–90% smaller photos, switch to WebP or JPEG.</span>
+                  </div>
+                )}
+                {format === 'image/jpeg' && (
+                  <div className={styles.formatTip}>
+                    <Info size={11} color="var(--accent)" />
+                    <span>JPEG has no transparency. Cutouts will be saved on white; use WebP to keep transparency.</span>
                   </div>
                 )}
               </div>
@@ -607,7 +599,7 @@ export default function Home() {
                       {img.status === 'done' && (
                         <a 
                           href={img.compressedUrl} 
-                          download={img.name}
+                          download={getOutputFilename(img.name, format)}
                           onClick={() => handleDownloadSingle(img)}
                           className={`${styles.actionIconBtn} ${styles.btnActionHighlight}`}
                           title="Download this optimized image"
@@ -629,101 +621,6 @@ export default function Home() {
             )}
           </section>
         </div>
-
-        {/* Live Compression Stats & Activity Logs */}
-        <section className={styles.logSection}>
-          <div className={styles.logHeader}>
-            <div className={styles.logHeaderLeft}>
-              <div className={styles.logTitle}>
-                <TerminalSquare size={13} color="var(--accent)" />
-                <span>Compression Stats & Logs</span>
-              </div>
-              <span className={styles.logCountBadge}>{logs.length} events</span>
-              {totalSaved > 0 && (
-                <span className={styles.logStatsPill}>
-                  <Check size={11} /> {formatBytes(totalSaved)} saved ({savedPercent}%)
-                </span>
-              )}
-            </div>
-
-            <div className={styles.logHeaderRight}>
-              <button 
-                className={styles.logActionBtn}
-                onClick={handleCopyLogs}
-                title="Copy activity logs to clipboard"
-              >
-                {copied ? <CheckCheck size={12} color="var(--accent)" /> : <Copy size={12} />}
-                <span>{copied ? 'Copied' : 'Copy'}</span>
-              </button>
-              <button 
-                className={styles.logActionBtn}
-                onClick={() => setLogs([])}
-                title="Clear all logs"
-              >
-                <Trash2 size={12} />
-                <span>Clear</span>
-              </button>
-              <button 
-                className={styles.logActionBtn}
-                onClick={() => setIsLogExpanded(!isLogExpanded)}
-                title={isLogExpanded ? 'Minimize logs' : 'Expand logs'}
-              >
-                <span>{isLogExpanded ? 'Minimize' : 'Expand'}</span>
-              </button>
-            </div>
-          </div>
-
-          {isLogExpanded && (
-            <div className={styles.logTerminal}>
-              {logs.length === 0 ? (
-                <div className={styles.logEmpty}>
-                  No events recorded yet. Drag and drop images to see live compression telemetry.
-                </div>
-              ) : (
-                logs.map(log => (
-                  <div key={log.id} className={styles.logLine}>
-                    <span className={styles.logTime}>{log.timestamp}</span>
-                    <span className={`${styles.logTag} ${styles[`logTag_${log.tag}`] || styles[`logTag_${log.level}`]}`}>
-                      [{log.tag}]
-                    </span>
-                    <span className={styles.logMsg}>{log.message}</span>
-                  </div>
-                ))
-              )}
-              <div ref={logEndRef} />
-            </div>
-          )}
-        </section>
-
-        {/* Feature Highlights Strip */}
-        <section className={styles.engineStrip}>
-          <div className={styles.engineCard}>
-            <div className={styles.engineCardTitle}>
-              <Boxes size={14} /> Batch Processing
-            </div>
-            <div className={styles.engineCardDesc}>
-              Drop dozens of photos at once. Compress entire photo galleries or folders in seconds without slowing down.
-            </div>
-          </div>
-
-          <div className={styles.engineCard}>
-            <div className={styles.engineCardTitle}>
-              <Vault size={14} /> 100% Private & Safe
-            </div>
-            <div className={styles.engineCardDesc}>
-              Your photos never leave your device. Perfect for personal memories, confidential work files, and client assets.
-            </div>
-          </div>
-
-          <div className={styles.engineCard}>
-            <div className={styles.engineCardTitle}>
-              <Scale size={14} /> Free Forever
-            </div>
-            <div className={styles.engineCardDesc}>
-              No subscriptions, no hidden watermarks, and no file size limits. High-speed compression open to everyone.
-            </div>
-          </div>
-        </section>
 
         {/* Knowledge Base Section: Tabbed Switcher (FAQ / Security & Specs) */}
         <section className={styles.knowledgeSection}>

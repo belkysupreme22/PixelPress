@@ -45,7 +45,48 @@ self.onmessage = async (e) => {
     let finalMimeType = targetFormat === 'original' ? mimeType : targetFormat;
 
     if (finalMimeType === 'image/jpeg' || finalMimeType === 'image/jpg') {
-      outputBuffer = await encodeJpeg(imageData, {
+      // JPEG has no alpha channel. If input has transparency (e.g. PNG cutout),
+      // composite transparent and semi-transparent pixels onto a clean white (#FFFFFF) background
+      // to prevent black backgrounds or dirty residual background artifacts.
+      let jpegInputData = imageData;
+      const data = imageData.data;
+      let hasAlpha = false;
+      for (let i = 3; i < data.length; i += 4) {
+        if (data[i] < 255) {
+          hasAlpha = true;
+          break;
+        }
+      }
+
+      if (hasAlpha) {
+        const opaqueData = new Uint8ClampedArray(data.length);
+        for (let i = 0; i < data.length; i += 4) {
+          const a = data[i + 3] / 255;
+          if (a === 1) {
+            opaqueData[i] = data[i];
+            opaqueData[i + 1] = data[i + 1];
+            opaqueData[i + 2] = data[i + 2];
+            opaqueData[i + 3] = 255;
+          } else if (a === 0) {
+            opaqueData[i] = 255;
+            opaqueData[i + 1] = 255;
+            opaqueData[i + 2] = 255;
+            opaqueData[i + 3] = 255;
+          } else {
+            opaqueData[i] = Math.round(data[i] * a + 255 * (1 - a));
+            opaqueData[i + 1] = Math.round(data[i + 1] * a + 255 * (1 - a));
+            opaqueData[i + 2] = Math.round(data[i + 2] * a + 255 * (1 - a));
+            opaqueData[i + 3] = 255;
+          }
+        }
+        jpegInputData = {
+          width: imageData.width,
+          height: imageData.height,
+          data: opaqueData,
+        };
+      }
+
+      outputBuffer = await encodeJpeg(jpegInputData, {
         quality: Math.round(quality),
       });
       finalMimeType = 'image/jpeg';

@@ -200,12 +200,18 @@
   display: grid;
   grid-template-columns: 288px 1fr;
   gap: 24px;
-  align-items: start;
+  align-items: stretch;
 }
 
 @media (max-width: 820px) {
   .workspaceGrid {
     grid-template-columns: 1fr;
+  }
+  .controlsPanel {
+    height: auto;
+  }
+  .actionButtons {
+    margin-top: 0;
   }
 }
 
@@ -218,6 +224,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  height: 100%;
 }
 
 .controlsHeader {
@@ -335,7 +342,8 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding-top: 10px;
+  margin-top: auto;
+  padding-top: 16px;
   border-top: 1px solid var(--border);
 }
 
@@ -350,6 +358,7 @@
   flex-direction: column;
   gap: 12px;
   min-width: 0;
+  height: 100%;
 }
 
 .stageAddMore {
@@ -442,6 +451,8 @@
   cursor: pointer;
   overflow: hidden;
   min-height: 384px;
+  height: 100%;
+  flex: 1;
   transition: border-color var(--transition-fast), background-color var(--transition-fast);
 }
 

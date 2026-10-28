@@ -24,7 +24,7 @@ import {
   SlidersHorizontal,
   Info,
   SplitSquareVertical,
-  Sparkles,
+  Bookmark,
   Maximize2
 } from 'lucide-react';
 import styles from './page.module.css';
@@ -403,7 +403,7 @@ export default function Home() {
             {/* One-Click Presets Bar */}
             <div className={styles.presetsSection}>
               <div className={styles.presetsLabel}>
-                <Sparkles size={11} color="var(--accent)" />
+                <Bookmark size={11} color="var(--accent)" />
                 <span>Presets:</span>
               </div>
               <div className={styles.presetsGrid}>

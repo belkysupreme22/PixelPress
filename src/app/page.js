@@ -694,6 +694,12 @@ export default function Home() {
                       ) : (
                         <img src={URL.createObjectURL(img.originalFile)} alt="preview" />
                       )}
+                      {img.status === 'done' && (
+                        <div className={styles.thumbOverlayBadge}>
+                          <SplitSquareVertical size={13} color="var(--accent)" />
+                          <span>COMPARE</span>
+                        </div>
+                      )}
                     </div>
 
                     <div className={styles.itemDetails}>
@@ -736,6 +742,17 @@ export default function Home() {
                             : 'Optimal (Original kept)'}
                         </span>
                       )}
+                      {img.status === 'done' && (
+                        <button
+                          type="button"
+                          className={styles.telemetryCompareLink}
+                          onClick={() => setComparisonImage(img)}
+                          title="Inspect visual quality in split slider"
+                        >
+                          <SplitSquareVertical size={11} color="var(--accent)" />
+                          <span>Compare Slider</span>
+                        </button>
+                      )}
                     </div>
 
                     <div className={styles.itemActions}>
@@ -743,10 +760,11 @@ export default function Home() {
                         <button
                           type="button"
                           onClick={() => setComparisonImage(img)}
-                          className={`${styles.actionIconBtn} ${styles.actionIconBtnCompare}`}
-                          title="Compare Before & After in split view"
+                          className={styles.btnCompareCallout}
+                          title="Compare original vs compressed in interactive split slider"
                         >
-                          <SplitSquareVertical size={14} />
+                          <SplitSquareVertical size={13} color="var(--accent)" />
+                          <span>Before / After</span>
                         </button>
                       )}
                       {img.status === 'done' && (

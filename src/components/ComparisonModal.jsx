@@ -102,6 +102,10 @@ export default function ComparisonModal({ image, isOpen, onClose, targetFormat }
         <div className={styles.header}>
           <div className={styles.headerLeft}>
             <div className={styles.titleWrap}>
+              <span className={styles.modalBadge}>
+                <SplitSquareVertical size={12} color="var(--accent)" />
+                BEFORE / AFTER
+              </span>
               <span className={styles.imageName} title={image.name}>{image.name}</span>
               <span className={styles.metricsBadge}>
                 {formatBytes(originalSize)} → {formatBytes(compressedSize)} 
@@ -200,14 +204,24 @@ export default function ComparisonModal({ image, isOpen, onClose, targetFormat }
                 </div>
               </div>
 
-              {/* Interactive Divider Line with Central Handle */}
+              {/* Interactive Divider Line with Self-Explanatory Handle */}
               <div 
                 className={styles.dividerLine}
                 style={{ left: `${sliderPos}%` }}
               >
-                <div className={styles.handleKnob}>
-                  <ArrowLeftRight size={12} color="var(--accent)" />
+                <div className={styles.handleKnobPill}>
+                  <span className={styles.handleLabelLeft}>ORIGINAL</span>
+                  <ArrowLeftRight size={11} color="var(--accent)" />
+                  <span className={styles.handleLabelRight}>OPTIMIZED</span>
                 </div>
+              </div>
+
+              {/* Floating top indicators */}
+              <div className={styles.topIndicatorLeft}>
+                <span>BEFORE</span>
+              </div>
+              <div className={styles.topIndicatorRight}>
+                <span>AFTER</span>
               </div>
 
               {/* Floating comparison metadata pills */}

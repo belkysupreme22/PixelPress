@@ -30,17 +30,50 @@ async function decodeImage(buffer, mimeType) {
   return imageData;
 }
 
+function resizeImageData(imgData, maxDimension) {
+  if (!maxDimension || maxDimension <= 0) return imgData;
+  const { width, height } = imgData;
+  if (width <= maxDimension && height <= maxDimension) return imgData;
+
+  let targetWidth = width;
+  let targetHeight = height;
+  if (width >= height) {
+    targetWidth = maxDimension;
+    targetHeight = Math.max(1, Math.round((height * maxDimension) / width));
+  } else {
+    targetHeight = maxDimension;
+    targetWidth = Math.max(1, Math.round((width * maxDimension) / height));
+  }
+
+  const srcCanvas = new OffscreenCanvas(width, height);
+  const srcCtx = srcCanvas.getContext('2d');
+  srcCtx.putImageData(imgData, 0, 0);
+
+  const dstCanvas = new OffscreenCanvas(targetWidth, targetHeight);
+  const dstCtx = dstCanvas.getContext('2d');
+  dstCtx.imageSmoothingEnabled = true;
+  dstCtx.imageSmoothingQuality = 'high';
+  dstCtx.drawImage(srcCanvas, 0, 0, targetWidth, targetHeight);
+
+  return dstCtx.getImageData(0, 0, targetWidth, targetHeight);
+}
+
 self.onmessage = async (e) => {
-  const { id, buffer, mimeType, targetFormat, quality, effort } = e.data;
+  const { id, buffer, mimeType, targetFormat, quality, effort, maxDimension } = e.data;
 
   try {
     const startTime = performance.now();
     const originalSize = buffer.byteLength;
 
     // 1. Decode input buffer to raw ImageData
-    const imageData = await decodeImage(buffer, mimeType);
+    const rawDecoded = await decodeImage(buffer, mimeType);
+    const originalWidth = rawDecoded.width;
+    const originalHeight = rawDecoded.height;
 
-    // 2. Encode to target format using specialized WASM codec
+    // 2. High-quality bicubic downscale if maxDimension is specified
+    const imageData = resizeImageData(rawDecoded, maxDimension);
+
+    // 3. Encode to target format using specialized WASM codec
     let outputBuffer;
     let finalMimeType = targetFormat === 'original' ? mimeType : targetFormat;
 
@@ -130,6 +163,8 @@ self.onmessage = async (e) => {
         durationMs,
         width: imageData.width,
         height: imageData.height,
+        originalWidth,
+        originalHeight,
       },
       [outputBuffer] // Transferable ArrayBuffer (zero-copy)
     );

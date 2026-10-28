@@ -22,19 +22,65 @@ import {
   AlertCircle, 
   RefreshCw, 
   SlidersHorizontal,
-  Info
+  Info,
+  SplitSquareVertical,
+  Sparkles,
+  Maximize2
 } from 'lucide-react';
 import styles from './page.module.css';
 import { compressImage, formatBytes } from '../utils/compressor';
 import FlickeringGrid from '../components/FlickeringGrid';
 import Tooltip from '../components/Tooltip';
 import ToastContainer from '../components/Toast';
+import ComparisonModal from '../components/ComparisonModal';
+
+const PRESETS = [
+  {
+    id: 'web',
+    name: 'Web & SEO',
+    format: 'image/webp',
+    quality: 75,
+    effort: 4,
+    maxDimension: 1920,
+    description: 'WebP 75%, Max 1920px (Best for websites)'
+  },
+  {
+    id: 'social',
+    name: 'Social',
+    format: 'image/jpeg',
+    quality: 82,
+    effort: 4,
+    maxDimension: 2048,
+    description: 'JPEG 82%, Max 2048px (Best for sharing)'
+  },
+  {
+    id: 'print',
+    name: 'Lossless',
+    format: 'image/png',
+    quality: 100,
+    effort: 2,
+    maxDimension: 0,
+    description: 'PNG 100% (Strict pixel fidelity)'
+  },
+  {
+    id: 'compact',
+    name: 'Ultra',
+    format: 'image/avif',
+    quality: 60,
+    effort: 4,
+    maxDimension: 1280,
+    description: 'AVIF 60%, Max 1280px (Smallest payload)'
+  },
+];
 
 export default function Home() {
   const [images, setImages] = useState([]);
   const [format, setFormat] = useState('original');
   const [quality, setQuality] = useState(75);
   const [effort, setEffort] = useState(4);
+  const [maxDimension, setMaxDimension] = useState(0); // 0 = original (no downscale)
+  const [activePreset, setActivePreset] = useState('custom'); // 'web' | 'social' | 'print' | 'compact' | 'custom'
+  const [comparisonImage, setComparisonImage] = useState(null);
   const [isCompressing, setIsCompressing] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [hasRefusal, setHasRefusal] = useState(false);
@@ -78,20 +124,36 @@ export default function Home() {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
+  // Apply one-click preset
+  const handleApplyPreset = (preset) => {
+    setActivePreset(preset.id);
+    setFormat(preset.format);
+    setQuality(preset.quality);
+    setEffort(preset.effort);
+    setMaxDimension(preset.maxDimension);
+
+    notify('Preset applied', `${preset.name} active (${preset.format.replace('image/', '').toUpperCase()})`, 'info', 2000);
+    if (images.length > 0) {
+      handleRecompressAll(preset.format, preset.quality, preset.effort, preset.maxDimension);
+    }
+  };
+
   // Auto-compress a single image
-  const compressSingle = async (imgItem, targetFormat, targetQuality, targetEffort) => {
+  const compressSingle = async (imgItem, targetFormat, targetQuality, targetEffort, targetMaxDim = maxDimension) => {
     const origSize = imgItem.originalSize || imgItem.originalFile?.size || 0;
     const codecName = targetFormat === 'original' 
       ? imgItem.originalFile.type.replace('image/', '').toUpperCase() 
       : targetFormat.replace('image/', '').toUpperCase();
 
-    addLog('CODEC', `Optimizing ${imgItem.name} (${formatBytes(origSize)}) -> ${codecName} [Q:${targetQuality}%, Effort:${targetEffort}]`, 'codec');
+    const dimInfo = targetMaxDim > 0 ? `, MaxDim:${targetMaxDim}px` : '';
+    addLog('CODEC', `Optimizing ${imgItem.name} (${formatBytes(origSize)}) -> ${codecName} [Q:${targetQuality}%, Effort:${targetEffort}${dimInfo}]`, 'codec');
 
     try {
       const result = await compressImage(imgItem.originalFile, {
         format: targetFormat,
         quality: targetQuality,
         effort: targetEffort,
+        maxDimension: targetMaxDim,
       });
 
       setImages(prev => prev.map(item => {
@@ -164,7 +226,7 @@ export default function Home() {
 
     // Immediately trigger WASM workers for each image
     newItems.forEach(item => {
-      compressSingle(item, format, quality, effort);
+      compressSingle(item, format, quality, effort, maxDimension);
     });
   };
 
@@ -175,16 +237,22 @@ export default function Home() {
   };
 
   // Recompress all images when settings change or user clicks Recompress
-  const handleRecompressAll = async (targetFmt = format, targetQ = quality, targetEff = effort) => {
+  const handleRecompressAll = async (
+    targetFmt = format, 
+    targetQ = quality, 
+    targetEff = effort, 
+    targetDim = maxDimension
+  ) => {
     if (images.length === 0) return;
     setIsCompressing(true);
 
-    addLog('CONFIG', `Recompressing ${images.length} files with Format: ${targetFmt}, Quality: ${targetQ}%, Effort: ${targetEff}`, 'codec');
+    const dimDesc = targetDim > 0 ? `, MaxDim: ${targetDim}px` : '';
+    addLog('CONFIG', `Recompressing ${images.length} files with Format: ${targetFmt}, Quality: ${targetQ}%, Effort: ${targetEff}${dimDesc}`, 'codec');
     notify('Recomputing queue', `Applying new codec & quality parameters`, 'info');
     setImages(prev => prev.map(img => ({ ...img, status: 'compressing' })));
 
     await Promise.all(
-      images.map(img => compressSingle(img, targetFmt, targetQ, targetEff))
+      images.map(img => compressSingle(img, targetFmt, targetQ, targetEff, targetDim))
     );
 
     setIsCompressing(false);
@@ -270,6 +338,14 @@ export default function Home() {
       {/* Toast Notification Container */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
+      {/* Interactive Before/After Split Comparison Modal */}
+      <ComparisonModal
+        image={comparisonImage}
+        isOpen={!!comparisonImage}
+        onClose={() => setComparisonImage(null)}
+        targetFormat={format}
+      />
+
       {/* 44px Sticky Header */}
       <header className={styles.header}>
         <div className={styles.headerInner}>
@@ -324,6 +400,27 @@ export default function Home() {
               <span>Compression Settings</span>
             </div>
 
+            {/* One-Click Presets Bar */}
+            <div className={styles.presetsSection}>
+              <div className={styles.presetsLabel}>
+                <Sparkles size={11} color="var(--accent)" />
+                <span>Presets:</span>
+              </div>
+              <div className={styles.presetsGrid}>
+                {PRESETS.map(preset => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    className={`${styles.presetPill} ${activePreset === preset.id ? styles.presetPillActive : ''}`}
+                    onClick={() => handleApplyPreset(preset)}
+                    title={preset.description}
+                  >
+                    <span>{preset.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className={styles.controlsGroup}>
               <div className={styles.field}>
                 <div className={styles.fieldHeader}>
@@ -343,7 +440,8 @@ export default function Home() {
                   onChange={e => {
                     const newFmt = e.target.value;
                     setFormat(newFmt);
-                    if (images.length > 0) handleRecompressAll(newFmt, quality, effort);
+                    setActivePreset('custom');
+                    if (images.length > 0) handleRecompressAll(newFmt, quality, effort, maxDimension);
                   }}
                 >
                   <option value="original">Auto (Keep Original Format)</option>
@@ -386,9 +484,12 @@ export default function Home() {
                       min="1" 
                       max="100" 
                       value={quality} 
-                      onChange={e => setQuality(Number(e.target.value))}
-                      onMouseUp={() => { if (images.length > 0) handleRecompressAll(format, quality, effort); }}
-                      onTouchEnd={() => { if (images.length > 0) handleRecompressAll(format, quality, effort); }}
+                      onChange={e => {
+                        setQuality(Number(e.target.value));
+                        setActivePreset('custom');
+                      }}
+                      onMouseUp={() => { if (images.length > 0) handleRecompressAll(format, quality, effort, maxDimension); }}
+                      onTouchEnd={() => { if (images.length > 0) handleRecompressAll(format, quality, effort, maxDimension); }}
                       className={styles.rangeInput}
                     />
                   </div>
@@ -414,12 +515,50 @@ export default function Home() {
                     min="1" 
                     max="6" 
                     value={effort} 
-                    onChange={e => setEffort(Number(e.target.value))}
-                    onMouseUp={() => { if (images.length > 0) handleRecompressAll(format, quality, effort); }}
-                    onTouchEnd={() => { if (images.length > 0) handleRecompressAll(format, quality, effort); }}
+                    onChange={e => {
+                      setEffort(Number(e.target.value));
+                      setActivePreset('custom');
+                    }}
+                    onMouseUp={() => { if (images.length > 0) handleRecompressAll(format, quality, effort, maxDimension); }}
+                    onTouchEnd={() => { if (images.length > 0) handleRecompressAll(format, quality, effort, maxDimension); }}
                     className={styles.rangeInput}
                   />
                 </div>
+              </div>
+
+              {/* Downscale / Max Dimension Selector */}
+              <div className={styles.field}>
+                <div className={styles.fieldHeader}>
+                  <span className={styles.fieldLabelWrap}>
+                    <span>Downscale:</span>
+                    <Tooltip 
+                      showIcon={true}
+                      label="Resolution Downscaling" 
+                      content="Shrink resolution before compressing. Crucial for massive 20MP-50MP camera photos to achieve 90%+ reductions in seconds."
+                      position="top"
+                    />
+                  </span>
+                  {maxDimension > 0 && (
+                    <span className={styles.fieldValue}>{maxDimension}px</span>
+                  )}
+                </div>
+                <select 
+                  className={styles.select}
+                  value={maxDimension} 
+                  onChange={e => {
+                    const newDim = Number(e.target.value);
+                    setMaxDimension(newDim);
+                    setActivePreset('custom');
+                    if (images.length > 0) handleRecompressAll(format, quality, effort, newDim);
+                  }}
+                >
+                  <option value={0}>Original (No Downscaling)</option>
+                  <option value={3840}>4K UHD (Max 3840px)</option>
+                  <option value={2560}>2K QHD (Max 2560px)</option>
+                  <option value={1920}>Full HD (Max 1920px · Recommended)</option>
+                  <option value={1280}>HD Ready (Max 1280px)</option>
+                  <option value={800}>Web Thumbnail (Max 800px)</option>
+                </select>
               </div>
             </div>
 
@@ -545,7 +684,11 @@ export default function Home() {
 
                 {images.map(img => (
                   <div key={img.id} className={styles.itemCard}>
-                    <div className={styles.thumbWrap}>
+                    <div 
+                      className={`${styles.thumbWrap} ${img.status === 'done' ? styles.thumbWrapClickable : ''}`}
+                      onClick={() => { if (img.status === 'done') setComparisonImage(img); }}
+                      title={img.status === 'done' ? "Click to compare Before & After" : "Preview"}
+                    >
                       {img.compressedUrl ? (
                         <img src={img.compressedUrl} alt="preview" />
                       ) : (
@@ -596,6 +739,16 @@ export default function Home() {
                     </div>
 
                     <div className={styles.itemActions}>
+                      {img.status === 'done' && (
+                        <button
+                          type="button"
+                          onClick={() => setComparisonImage(img)}
+                          className={`${styles.actionIconBtn} ${styles.actionIconBtnCompare}`}
+                          title="Compare Before & After in split view"
+                        >
+                          <SplitSquareVertical size={14} />
+                        </button>
+                      )}
                       {img.status === 'done' && (
                         <a 
                           href={img.compressedUrl} 

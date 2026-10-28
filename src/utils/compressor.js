@@ -31,7 +31,7 @@ class CompressionWorkerPool {
     return idleWorker || null;
   }
 
-  compress(file, { format, quality = 75, effort = 4 }) {
+  compress(file, { format, quality = 75, effort = 4, maxDimension = 0 }) {
     return new Promise(async (resolve, reject) => {
       const id = Math.random().toString(36).substring(2, 9);
       const buffer = await file.arrayBuffer();
@@ -45,6 +45,7 @@ class CompressionWorkerPool {
         targetFormat: format,
         quality,
         effort,
+        maxDimension,
         resolve,
         reject,
       };
@@ -95,12 +96,18 @@ class CompressionWorkerPool {
           id: task.id,
           originalFile: task.file,
           originalSize: task.originalSize,
+          originalUrl: URL.createObjectURL(task.file),
+          originalWidth: e.data.originalWidth,
+          originalHeight: e.data.originalHeight,
+          origDimensions: e.data.originalWidth && e.data.originalHeight ? `${e.data.originalWidth} × ${e.data.originalHeight}` : null,
           compressedBlob: finalBlob,
           compressedSize: finalSize,
           compressedUrl: URL.createObjectURL(finalBlob),
           reductionPercentage: reduction,
           name: task.file.name,
           durationMs: e.data.durationMs,
+          width: e.data.width,
+          height: e.data.height,
           dimensions: `${e.data.width} × ${e.data.height}`,
           status: 'done',
         });
@@ -127,6 +134,7 @@ class CompressionWorkerPool {
         targetFormat: task.targetFormat,
         quality: task.quality,
         effort: task.effort,
+        maxDimension: task.maxDimension,
       },
       [task.buffer]
     );

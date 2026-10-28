@@ -705,17 +705,18 @@ export default function Home() {
                     <div className={styles.itemDetails}>
                       <div className={styles.itemName} title={img.name}>{img.name}</div>
                       <div className={styles.itemMeta}>
-                        <span>{img.dimensions || 'Measuring...'}</span>
-                        <span>·</span>
-                        {img.status === 'compressing' ? (
+                        {img.status === 'compressing' && (
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--accent)' }}>
                             <span className={styles.spinnerSmall} />
-                            Compressing image...
+                            Optimizing...
                           </span>
-                        ) : img.durationMs ? (
-                          <span>Compressed in {img.durationMs}ms</span>
-                        ) : (
-                          <span>Ready</span>
+                        )}
+                        {img.status === 'done' && (
+                          <>
+                            {img.dimensions && <span>{img.dimensions}</span>}
+                            {img.dimensions && img.durationMs && <span>·</span>}
+                            {img.durationMs && <span>{img.durationMs}ms</span>}
+                          </>
                         )}
                         {img.status === 'error' && (
                           <span style={{ color: 'var(--error)' }}>Failed: {img.error}</span>

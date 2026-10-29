@@ -3,23 +3,16 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   X, 
-  Columns2, 
   SplitSquareVertical, 
-  Download, 
-  ArrowLeftRight,
-  Maximize2,
-  Minimize2,
-  ZoomIn,
-  ZoomOut
+  Download,
+  ArrowLeftRight 
 } from 'lucide-react';
 import styles from './ComparisonModal.module.css';
-import { formatBytes } from '../utils/compressor';
+import { formatBytes, getOutputFilename } from '../utils/compressor';
 
 export default function ComparisonModal({ image, isOpen, onClose, targetFormat }) {
   const [sliderPos, setSliderPos] = useState(50); // percentage 0 - 100
   const [isDragging, setIsDragging] = useState(false);
-  const [viewMode, setViewMode] = useState('split'); // 'split' | 'side-by-side'
-  const [zoomLevel, setZoomLevel] = useState(1); // 1 = fit, 2 = 2x zoom
   const containerRef = useRef(null);
 
   // Close on Escape, slider control on Left/Right arrows
@@ -75,7 +68,7 @@ export default function ComparisonModal({ image, isOpen, onClose, targetFormat }
     if (isDragging) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
-      window.addEventListener('touchmove', handleTouchMove);
+      window.addEventListener('touchmove', handleTouchMove, { passive: false });
       window.addEventListener('touchend', handleMouseUp);
     }
 
@@ -94,6 +87,9 @@ export default function ComparisonModal({ image, isOpen, onClose, targetFormat }
   const originalSize = image.originalSize || image.originalFile?.size || 0;
   const compressedSize = image.compressedSize || originalSize;
   const reduction = image.reductionPercentage || 0;
+  const outMime = image.mimeType || image.compressedBlob?.type || targetFormat;
+  const formatLabel = outMime ? outMime.replace('image/', '').toUpperCase() : 'OPTIMIZED';
+  const downloadFilename = getOutputFilename(image.name, outMime);
 
   return (
     <div className={styles.overlay} onClick={onClose} role="dialog" aria-modal="true">
@@ -107,6 +103,11 @@ export default function ComparisonModal({ image, isOpen, onClose, targetFormat }
                 BEFORE / AFTER
               </span>
               <span className={styles.imageName} title={image.name}>{image.name}</span>
+              {outMime && (
+                <span className={styles.modalFormatBadge}>
+                  {formatLabel}
+                </span>
+              )}
               <span className={styles.metricsBadge}>
                 {formatBytes(originalSize)} → {formatBytes(compressedSize)} 
                 <span className={styles.reductionText}>
@@ -117,42 +118,15 @@ export default function ComparisonModal({ image, isOpen, onClose, targetFormat }
           </div>
 
           <div className={styles.headerControls}>
-            <div className={styles.viewToggleGroup}>
-              <button 
-                className={`${styles.toggleBtn} ${viewMode === 'split' ? styles.toggleBtnActive : ''}`}
-                onClick={() => setViewMode('split')}
-                title="Split slider view"
-              >
-                <SplitSquareVertical size={13} />
-                <span>Split</span>
-              </button>
-              <button 
-                className={`${styles.toggleBtn} ${viewMode === 'side-by-side' ? styles.toggleBtnActive : ''}`}
-                onClick={() => setViewMode('side-by-side')}
-                title="Side by side comparison"
-              >
-                <Columns2 size={13} />
-                <span>Side by Side</span>
-              </button>
-            </div>
-
-            <button 
-              className={styles.iconBtn}
-              onClick={() => setZoomLevel(prev => prev === 1 ? 1.75 : 1)}
-              title={zoomLevel === 1 ? 'Zoom in (1.75x)' : 'Reset zoom'}
-            >
-              {zoomLevel === 1 ? <ZoomIn size={14} /> : <ZoomOut size={14} />}
-            </button>
-
             {image.compressedUrl && (
               <a 
                 href={image.compressedUrl} 
-                download={image.name}
+                download={downloadFilename}
                 className={styles.downloadBtn}
-                title="Download this optimized image"
+                title={`Download ${downloadFilename}`}
               >
                 <Download size={13} />
-                <span>Download</span>
+                <span>Download ({formatLabel})</span>
               </a>
             )}
 
@@ -162,111 +136,80 @@ export default function ComparisonModal({ image, isOpen, onClose, targetFormat }
           </div>
         </div>
 
-        {/* Viewport / Canvas Area */}
+        {/* Viewport: Interactive Split-Slider Comparator */}
         <div className={styles.viewport}>
-          {viewMode === 'split' ? (
+          <div 
+            ref={containerRef}
+            className={`${styles.splitStage} ${isDragging ? styles.dragging : ''}`}
+            onMouseDown={handleMouseDown}
+            onTouchStart={handleTouchStart}
+          >
+            {/* Layer 1: Compressed / Optimized (Base background) */}
+            <div className={styles.imageLayer}>
+              <img 
+                src={compressedSrc} 
+                alt="Optimized" 
+                className={styles.previewImage}
+                draggable={false}
+              />
+            </div>
+
+            {/* Layer 2: Original (Clipped on the left) */}
             <div 
-              ref={containerRef}
-              className={`${styles.splitStage} ${isDragging ? styles.dragging : ''}`}
-              onMouseDown={handleMouseDown}
-              onTouchStart={handleTouchStart}
+              className={styles.clippedLayer}
+              style={{ 
+                clipPath: `inset(0 ${100 - sliderPos}% 0 0)`
+              }}
             >
-              {/* Layer 1: Compressed / Optimized (Base background) */}
-              <div 
-                className={styles.imageLayer}
-                style={{ transform: `scale(${zoomLevel})` }}
-              >
+              <div className={styles.imageLayer}>
                 <img 
-                  src={compressedSrc} 
-                  alt="Optimized" 
+                  src={originalSrc} 
+                  alt="Original" 
                   className={styles.previewImage}
                   draggable={false}
                 />
               </div>
+            </div>
 
-              {/* Layer 2: Original (Clipped on the left) */}
-              <div 
-                className={styles.clippedLayer}
-                style={{ 
-                  clipPath: `inset(0 ${100 - sliderPos}% 0 0)`
-                }}
-              >
-                <div 
-                  className={styles.imageLayer}
-                  style={{ transform: `scale(${zoomLevel})` }}
-                >
-                  <img 
-                    src={originalSrc} 
-                    alt="Original" 
-                    className={styles.previewImage}
-                    draggable={false}
-                  />
-                </div>
-              </div>
-
-              {/* Interactive Divider Line with Self-Explanatory Handle */}
-              <div 
-                className={styles.dividerLine}
-                style={{ left: `${sliderPos}%` }}
-              >
-                <div className={styles.handleKnobPill}>
-                  <span className={styles.handleLabelLeft}>ORIGINAL</span>
-                  <ArrowLeftRight size={11} color="var(--accent)" />
-                  <span className={styles.handleLabelRight}>OPTIMIZED</span>
-                </div>
-              </div>
-
-              {/* Floating top indicators */}
-              <div className={styles.topIndicatorLeft}>
-                <span>BEFORE</span>
-              </div>
-              <div className={styles.topIndicatorRight}>
-                <span>AFTER</span>
-              </div>
-
-              {/* Floating comparison metadata pills */}
-              <div className={`${styles.labelPill} ${styles.labelPillLeft}`}>
-                <span className={styles.labelTag}>ORIGINAL</span>
-                <span>{formatBytes(originalSize)}</span>
-                {image.origDimensions && <span className={styles.labelDim}>· {image.origDimensions}</span>}
-              </div>
-
-              <div className={`${styles.labelPill} ${styles.labelPillRight}`}>
-                <span className={styles.labelTagOpt}>OPTIMIZED</span>
-                <span>{formatBytes(compressedSize)}</span>
-                {image.dimensions && <span className={styles.labelDim}>· {image.dimensions}</span>}
+            {/* Interactive Divider Line with Pill Handle */}
+            <div 
+              className={styles.dividerLine}
+              style={{ left: `${sliderPos}%` }}
+            >
+              <div className={styles.handleKnobPill}>
+                <span className={styles.handleLabelLeft}>ORIGINAL</span>
+                <ArrowLeftRight size={11} color="var(--accent)" />
+                <span className={styles.handleLabelRight}>OPTIMIZED</span>
               </div>
             </div>
-          ) : (
-            /* Side by Side Mode */
-            <div className={styles.sideBySideGrid}>
-              <div className={styles.sideCard}>
-                <div className={styles.sideCardHeader}>
-                  <span className={styles.labelTag}>ORIGINAL</span>
-                  <span className={styles.sideCardMeta}>{formatBytes(originalSize)} {image.origDimensions ? `· ${image.origDimensions}` : ''}</span>
-                </div>
-                <div className={styles.sideCardImageWrap} style={{ transform: `scale(${zoomLevel})` }}>
-                  <img src={originalSrc} alt="Original" className={styles.previewImage} />
-                </div>
-              </div>
 
-              <div className={styles.sideCard}>
-                <div className={styles.sideCardHeader}>
-                  <span className={styles.labelTagOpt}>OPTIMIZED</span>
-                  <span className={styles.sideCardMeta}>{formatBytes(compressedSize)} {image.dimensions ? `· ${image.dimensions}` : ''} ({reduction.toFixed(1)}% smaller)</span>
-                </div>
-                <div className={styles.sideCardImageWrap} style={{ transform: `scale(${zoomLevel})` }}>
-                  <img src={compressedSrc} alt="Optimized" className={styles.previewImage} />
-                </div>
-              </div>
+            {/* Floating Top Corner Indicators */}
+            <div className={styles.topIndicatorLeft}>
+              <span>BEFORE · ORIGINAL</span>
             </div>
-          )}
+            <div className={styles.topIndicatorRight}>
+              <span>AFTER · {formatLabel}</span>
+            </div>
+
+            {/* Floating Bottom Metadata Pills */}
+            <div className={`${styles.labelPill} ${styles.labelPillLeft}`}>
+              <span className={styles.labelTag}>ORIGINAL</span>
+              <span>{formatBytes(originalSize)}</span>
+              {image.origDimensions && <span className={styles.labelDim}>· {image.origDimensions}</span>}
+            </div>
+
+            <div className={`${styles.labelPill} ${styles.labelPillRight}`}>
+              <span className={styles.labelTagOpt}>OPTIMIZED</span>
+              <span>{formatBytes(compressedSize)}</span>
+              {image.dimensions && <span className={styles.labelDim}>· {image.dimensions}</span>}
+            </div>
+          </div>
         </div>
 
-        {/* Modal Footer Hints */}
+        {/* Modal Footer */}
         <div className={styles.footer}>
           <div className={styles.footerHint}>
-            <span>Tip: Drag slider or use Left / Right arrows to inspect pixel fidelity. Press Esc to exit.</span>
+            <span>Tip: Drag the vertical slider or use Left / Right arrow keys to inspect pixel fidelity · Press Esc to exit</span>
           </div>
           <div className={styles.footerRatio}>
             <span>Split: {Math.round(sliderPos)}% Original / {Math.round(100 - sliderPos)}% Optimized</span>

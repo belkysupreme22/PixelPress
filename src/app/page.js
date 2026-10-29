@@ -24,62 +24,21 @@ import {
   SlidersHorizontal,
   Info,
   SplitSquareVertical,
-  Bookmark,
   Maximize2
 } from 'lucide-react';
 import styles from './page.module.css';
-import { compressImage, formatBytes } from '../utils/compressor';
+import { compressImage, formatBytes, getOutputFilename } from '../utils/compressor';
 import FlickeringGrid from '../components/FlickeringGrid';
 import Tooltip from '../components/Tooltip';
 import ToastContainer from '../components/Toast';
 import ComparisonModal from '../components/ComparisonModal';
 
-const PRESETS = [
-  {
-    id: 'web',
-    name: 'Web & SEO',
-    format: 'image/webp',
-    quality: 75,
-    effort: 4,
-    maxDimension: 1920,
-    description: 'WebP 75%, Max 1920px (Best for websites)'
-  },
-  {
-    id: 'social',
-    name: 'Social',
-    format: 'image/jpeg',
-    quality: 82,
-    effort: 4,
-    maxDimension: 2048,
-    description: 'JPEG 82%, Max 2048px (Best for sharing)'
-  },
-  {
-    id: 'print',
-    name: 'Lossless',
-    format: 'image/png',
-    quality: 100,
-    effort: 2,
-    maxDimension: 0,
-    description: 'PNG 100% (Strict pixel fidelity)'
-  },
-  {
-    id: 'compact',
-    name: 'Ultra',
-    format: 'image/avif',
-    quality: 60,
-    effort: 4,
-    maxDimension: 1280,
-    description: 'AVIF 60%, Max 1280px (Smallest payload)'
-  },
-];
-
 export default function Home() {
   const [images, setImages] = useState([]);
   const [format, setFormat] = useState('original');
   const [quality, setQuality] = useState(75);
-  const [effort, setEffort] = useState(4);
   const [maxDimension, setMaxDimension] = useState(0); // 0 = original (no downscale)
-  const [activePreset, setActivePreset] = useState('custom'); // 'web' | 'social' | 'print' | 'compact' | 'custom'
+  const [appliedSettings, setAppliedSettings] = useState({ format: 'original', quality: 75, maxDimension: 0 });
   const [comparisonImage, setComparisonImage] = useState(null);
   const [isCompressing, setIsCompressing] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -88,13 +47,25 @@ export default function Home() {
   const [activeBottomTab, setActiveBottomTab] = useState('faq'); // 'faq' | 'about'
   const fileInputRef = useRef(null);
 
-  // Activity logger dispatcher - streams directly to VS Code terminal via dev server API route
+  // Quality applies only to lossy formats (JPEG, WebP, AVIF)
+  // When format is 'original', show quality if any queued file is not pure PNG
+  const isLossyFormat = format === 'image/jpeg' || format === 'image/webp' || format === 'image/avif';
+  const hasLossyQueue = format === 'original' && images.some(img => img.originalFile?.type !== 'image/png');
+  const showQuality = isLossyFormat || hasLossyQueue;
+
+  const hasPendingChanges = images.length > 0 && (
+    format !== appliedSettings.format ||
+    (showQuality && quality !== appliedSettings.quality) ||
+    maxDimension !== appliedSettings.maxDimension
+  );
+
+  // Activity logger dispatcher - streams to terminal in dev mode
   const addLog = useCallback((tag, message, level = 'info') => {
     const timestamp = new Date().toLocaleTimeString();
     // 1. Browser console
     console.log(`%c[PixelPress ${tag}]%c ${message}`, 'color: #4ade80; font-weight: bold;', 'color: inherit;');
-    // 2. Stream to VS Code terminal (Node.js dev server stdout)
-    if (typeof window !== 'undefined') {
+    // 2. Stream to terminal during development
+    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
       fetch('/api/log', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -124,35 +95,21 @@ export default function Home() {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  // Apply one-click preset
-  const handleApplyPreset = (preset) => {
-    setActivePreset(preset.id);
-    setFormat(preset.format);
-    setQuality(preset.quality);
-    setEffort(preset.effort);
-    setMaxDimension(preset.maxDimension);
-
-    notify('Preset applied', `${preset.name} active (${preset.format.replace('image/', '').toUpperCase()})`, 'info', 2000);
-    if (images.length > 0) {
-      handleRecompressAll(preset.format, preset.quality, preset.effort, preset.maxDimension);
-    }
-  };
-
   // Auto-compress a single image
-  const compressSingle = async (imgItem, targetFormat, targetQuality, targetEffort, targetMaxDim = maxDimension) => {
+  const compressSingle = async (imgItem, targetFormat, targetQuality, targetMaxDim = maxDimension) => {
     const origSize = imgItem.originalSize || imgItem.originalFile?.size || 0;
     const codecName = targetFormat === 'original' 
       ? imgItem.originalFile.type.replace('image/', '').toUpperCase() 
       : targetFormat.replace('image/', '').toUpperCase();
 
     const dimInfo = targetMaxDim > 0 ? `, MaxDim:${targetMaxDim}px` : '';
-    addLog('CODEC', `Optimizing ${imgItem.name} (${formatBytes(origSize)}) -> ${codecName} [Q:${targetQuality}%, Effort:${targetEffort}${dimInfo}]`, 'codec');
+    const qInfo = (targetFormat !== 'image/png') ? ` [Q:${targetQuality}%${dimInfo}]` : ` [Lossless${dimInfo}]`;
+    addLog('CODEC', `Optimizing ${imgItem.name} (${formatBytes(origSize)}) -> ${codecName}${qInfo}`, 'codec');
 
     try {
       const result = await compressImage(imgItem.originalFile, {
         format: targetFormat,
         quality: targetQuality,
-        effort: targetEffort,
         maxDimension: targetMaxDim,
       });
 
@@ -225,8 +182,9 @@ export default function Home() {
     notify('Processing started', `Optimizing ${newItems.length} ${newItems.length === 1 ? 'file' : 'files'} in background`, 'info');
 
     // Immediately trigger WASM workers for each image
+    setAppliedSettings({ format, quality, maxDimension });
     newItems.forEach(item => {
-      compressSingle(item, format, quality, effort, maxDimension);
+      compressSingle(item, format, quality, maxDimension);
     });
   };
 
@@ -236,23 +194,24 @@ export default function Home() {
     handleFiles(e.dataTransfer.files);
   };
 
-  // Recompress all images when settings change or user clicks Recompress
+  // Recompress all images with current parameters
   const handleRecompressAll = async (
     targetFmt = format, 
     targetQ = quality, 
-    targetEff = effort, 
     targetDim = maxDimension
   ) => {
     if (images.length === 0) return;
     setIsCompressing(true);
+    setAppliedSettings({ format: targetFmt, quality: targetQ, maxDimension: targetDim });
 
     const dimDesc = targetDim > 0 ? `, MaxDim: ${targetDim}px` : '';
-    addLog('CONFIG', `Recompressing ${images.length} files with Format: ${targetFmt}, Quality: ${targetQ}%, Effort: ${targetEff}${dimDesc}`, 'codec');
-    notify('Recomputing queue', `Applying new codec & quality parameters`, 'info');
+    const qDesc = targetFmt !== 'image/png' ? `, Quality: ${targetQ}%` : ' (Lossless)';
+    addLog('CONFIG', `Recompressing ${images.length} files with Format: ${targetFmt}${qDesc}${dimDesc}`, 'codec');
+    notify('Recomputing queue', 'Applying updated parameters', 'info');
     setImages(prev => prev.map(img => ({ ...img, status: 'compressing' })));
 
     await Promise.all(
-      images.map(img => compressSingle(img, targetFmt, targetQ, targetEff, targetDim))
+      images.map(img => compressSingle(img, targetFmt, targetQ, targetDim))
     );
 
     setIsCompressing(false);
@@ -260,8 +219,10 @@ export default function Home() {
 
   // Single download trigger
   const handleDownloadSingle = (img) => {
-    addLog('EXPORT', `Exported ${img.name} (${formatBytes(img.compressedSize || img.originalSize)})`, 'info');
-    notify('Download started', `Downloading ${img.name}`, 'download');
+    const actualMime = img.mimeType || img.compressedBlob?.type;
+    const finalName = getOutputFilename(img.name, actualMime);
+    addLog('EXPORT', `Exported ${finalName} (${formatBytes(img.compressedSize || img.originalSize)})`, 'info');
+    notify('Download started', `Downloading ${finalName}`, 'download');
   };
 
   const handleDownloadAll = async () => {
@@ -272,13 +233,8 @@ export default function Home() {
 
     const zip = new JSZip();
     completed.forEach(img => {
-      let finalName = img.name;
-      if (format !== 'original') {
-        const ext = format === 'image/jpeg' ? '.jpg' : 
-                    format === 'image/png' ? '.png' : 
-                    format === 'image/webp' ? '.webp' : '.avif';
-        finalName = img.name.replace(/\.[^/.]+$/, "") + ext;
-      }
+      const actualMime = img.mimeType || img.compressedBlob?.type;
+      const finalName = getOutputFilename(img.name, actualMime);
       zip.file(finalName, img.compressedBlob);
     });
 
@@ -311,14 +267,6 @@ export default function Home() {
       addLog('REMOVE', `Removed ${item.name} from queue`, 'info');
       notify('Removed', `Removed ${item.name} from queue`, 'info', 2000);
     }
-  };
-
-  const getOutputFilename = (originalName, targetFormat) => {
-    if (targetFormat === 'original') return originalName;
-    const ext = targetFormat === 'image/jpeg' ? '.jpg' : 
-                targetFormat === 'image/png' ? '.png' : 
-                targetFormat === 'image/webp' ? '.webp' : '.avif';
-    return originalName.replace(/\.[^/.]+$/, "") + ext;
   };
 
   // Safe numerical stats calculation - NO NaN, NO negative values
@@ -400,27 +348,6 @@ export default function Home() {
               <span>Compression Settings</span>
             </div>
 
-            {/* One-Click Presets Bar */}
-            <div className={styles.presetsSection}>
-              <div className={styles.presetsLabel}>
-                <Bookmark size={11} color="var(--accent)" />
-                <span>Presets:</span>
-              </div>
-              <div className={styles.presetsGrid}>
-                {PRESETS.map(preset => (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    className={`${styles.presetPill} ${activePreset === preset.id ? styles.presetPillActive : ''}`}
-                    onClick={() => handleApplyPreset(preset)}
-                    title={preset.description}
-                  >
-                    <span>{preset.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             <div className={styles.controlsGroup}>
               <div className={styles.field}>
                 <div className={styles.fieldHeader}>
@@ -437,12 +364,7 @@ export default function Home() {
                 <select 
                   className={styles.select}
                   value={format} 
-                  onChange={e => {
-                    const newFmt = e.target.value;
-                    setFormat(newFmt);
-                    setActivePreset('custom');
-                    if (images.length > 0) handleRecompressAll(newFmt, quality, effort, maxDimension);
-                  }}
+                  onChange={e => setFormat(e.target.value)}
                 >
                   <option value="original">Auto (Keep Original Format)</option>
                   <option value="image/webp">WebP (Best for Websites)</option>
@@ -464,7 +386,7 @@ export default function Home() {
                 )}
               </div>
 
-              {format !== 'image/png' && (
+              {showQuality && (
                 <div className={styles.field}>
                   <div className={styles.fieldHeader}>
                     <span className={styles.fieldLabelWrap}>
@@ -484,47 +406,12 @@ export default function Home() {
                       min="1" 
                       max="100" 
                       value={quality} 
-                      onChange={e => {
-                        setQuality(Number(e.target.value));
-                        setActivePreset('custom');
-                      }}
-                      onMouseUp={() => { if (images.length > 0) handleRecompressAll(format, quality, effort, maxDimension); }}
-                      onTouchEnd={() => { if (images.length > 0) handleRecompressAll(format, quality, effort, maxDimension); }}
+                      onChange={e => setQuality(Number(e.target.value))}
                       className={styles.rangeInput}
                     />
                   </div>
                 </div>
               )}
-
-              <div className={styles.field}>
-                <div className={styles.fieldHeader}>
-                  <span className={styles.fieldLabelWrap}>
-                    <span>Effort:</span>
-                    <Tooltip 
-                      showIcon={true}
-                      label="Compression Effort" 
-                      content="Compression effort (1–6). Higher levels take slightly longer to shrink files even more."
-                      position="top"
-                    />
-                  </span>
-                  <span className={styles.fieldValue}>{effort}</span>
-                </div>
-                <div className={styles.rangeWrap}>
-                  <input 
-                    type="range" 
-                    min="1" 
-                    max="6" 
-                    value={effort} 
-                    onChange={e => {
-                      setEffort(Number(e.target.value));
-                      setActivePreset('custom');
-                    }}
-                    onMouseUp={() => { if (images.length > 0) handleRecompressAll(format, quality, effort, maxDimension); }}
-                    onTouchEnd={() => { if (images.length > 0) handleRecompressAll(format, quality, effort, maxDimension); }}
-                    className={styles.rangeInput}
-                  />
-                </div>
-              </div>
 
               {/* Downscale / Max Dimension Selector */}
               <div className={styles.field}>
@@ -545,12 +432,7 @@ export default function Home() {
                 <select 
                   className={styles.select}
                   value={maxDimension} 
-                  onChange={e => {
-                    const newDim = Number(e.target.value);
-                    setMaxDimension(newDim);
-                    setActivePreset('custom');
-                    if (images.length > 0) handleRecompressAll(format, quality, effort, newDim);
-                  }}
+                  onChange={e => setMaxDimension(Number(e.target.value))}
                 >
                   <option value={0}>Original (No Downscaling)</option>
                   <option value={3840}>4K UHD (Max 3840px)</option>
@@ -580,13 +462,13 @@ export default function Home() {
               />
               {images.length > 0 && (
                 <button 
-                  className={`${styles.btn} ${styles.btnSecondary} ${styles.btnFullWidth}`}
+                  className={`${styles.btn} ${hasPendingChanges ? styles.btnActionHighlight : styles.btnSecondary} ${styles.btnFullWidth}`}
                   disabled={anyCompressing}
                   onClick={() => handleRecompressAll()}
-                  title="Re-run compression with current parameters"
+                  title="Apply current parameters and recompress queue"
                 >
                   <RefreshCw size={14} className={anyCompressing ? styles.spinnerSmall : ''} />
-                  {anyCompressing ? 'Compressing...' : 'Recompress'}
+                  {anyCompressing ? 'Compressing...' : hasPendingChanges ? 'Recompress (Apply Settings)' : 'Recompress'}
                 </button>
               )}
               {images.length > 0 && (
@@ -713,6 +595,12 @@ export default function Home() {
                         )}
                         {img.status === 'done' && (
                           <>
+                            {(img.mimeType || img.compressedBlob?.type) && (
+                              <span className={styles.formatBadge}>
+                                {(img.mimeType || img.compressedBlob?.type).replace('image/', '').toUpperCase()}
+                              </span>
+                            )}
+                            {(img.mimeType || img.compressedBlob?.type) && img.dimensions && <span>·</span>}
                             {img.dimensions && <span>{img.dimensions}</span>}
                             {img.dimensions && img.durationMs && <span>·</span>}
                             {img.durationMs && <span>{img.durationMs}ms</span>}
@@ -760,10 +648,10 @@ export default function Home() {
                       {img.status === 'done' && (
                         <a 
                           href={img.compressedUrl} 
-                          download={getOutputFilename(img.name, format)}
+                          download={getOutputFilename(img.name, img.mimeType || img.compressedBlob?.type)}
                           onClick={() => handleDownloadSingle(img)}
                           className={`${styles.actionIconBtn} ${styles.btnActionHighlight}`}
-                          title="Download this optimized image"
+                          title={`Download ${getOutputFilename(img.name, img.mimeType || img.compressedBlob?.type)}`}
                         >
                           <Download size={14} />
                         </a>

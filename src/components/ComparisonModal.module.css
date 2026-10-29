@@ -74,6 +74,20 @@
   letter-spacing: 0.04em;
 }
 
+.modalFormatBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+}
+
 .imageName {
   font-family: var(--font-mono);
   font-size: 13px;
@@ -223,6 +237,7 @@
   justify-content: center;
   cursor: col-resize;
   overflow: hidden;
+  touch-action: none;
 }
 
 .imageLayer {
@@ -233,7 +248,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 180ms var(--ease-farm);
 }
 
 .clippedLayer {

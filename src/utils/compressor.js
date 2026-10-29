@@ -6,6 +6,33 @@ export function formatBytes(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
+export function getOutputFilename(originalName, mimeType) {
+  if (!originalName) return 'optimized-image-min.png';
+  const baseName = originalName.replace(/\.[^/.]+$/, "").replace(/-(min|compressed|optimized)$/i, "");
+  let ext = '';
+  switch (mimeType) {
+    case 'image/jpeg':
+    case 'image/jpg':
+      ext = 'jpg';
+      break;
+    case 'image/png':
+      ext = 'png';
+      break;
+    case 'image/webp':
+      ext = 'webp';
+      break;
+    case 'image/avif':
+      ext = 'avif';
+      break;
+    default: {
+      const match = originalName.match(/\.([^/.]+)$/);
+      ext = match ? match[1].toLowerCase() : 'png';
+      break;
+    }
+  }
+  return `${baseName}-min.${ext}`;
+}
+
 class CompressionWorkerPool {
   constructor(size = 2) {
     this.size = size;
@@ -31,7 +58,7 @@ class CompressionWorkerPool {
     return idleWorker || null;
   }
 
-  compress(file, { format, quality = 75, effort = 4, maxDimension = 0 }) {
+  compress(file, { format, quality = 75, maxDimension = 0 }) {
     return new Promise(async (resolve, reject) => {
       const id = Math.random().toString(36).substring(2, 9);
       const buffer = await file.arrayBuffer();
@@ -44,7 +71,6 @@ class CompressionWorkerPool {
         mimeType: file.type,
         targetFormat: format,
         quality,
-        effort,
         maxDimension,
         resolve,
         reject,
@@ -105,6 +131,8 @@ class CompressionWorkerPool {
           compressedUrl: URL.createObjectURL(finalBlob),
           reductionPercentage: reduction,
           name: task.file.name,
+          mimeType: finalBlob.type || e.data.mimeType,
+          format: finalBlob.type || e.data.mimeType,
           durationMs: e.data.durationMs,
           width: e.data.width,
           height: e.data.height,
@@ -133,7 +161,6 @@ class CompressionWorkerPool {
         mimeType: task.mimeType,
         targetFormat: task.targetFormat,
         quality: task.quality,
-        effort: task.effort,
         maxDimension: task.maxDimension,
       },
       [task.buffer]

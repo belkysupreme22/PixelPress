@@ -238,59 +238,6 @@
   border-bottom: 1px solid var(--border);
 }
 
-/* Presets section */
-.presetsSection {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-.presetsLabel {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-display);
-  font-size: 11px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-}
-
-.presetsGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-
-.presetPill {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 8px;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  color: var(--text-muted);
-  background: var(--bg-surface-alt);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  white-space: nowrap;
-}
-
-.presetPill:hover {
-  color: var(--text-primary);
-  border-color: var(--border-hover);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.presetPillActive {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: rgba(74, 222, 128, 0.08);
-  font-weight: 500;
-}
 
 .controlsGroup {
   display: flex;
@@ -695,6 +642,21 @@
   font-size: 11px;
   font-family: var(--font-mono);
   color: var(--text-muted);
+}
+
+.formatBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  font-size: 9px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--accent);
+  background: rgba(74, 222, 128, 0.08);
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  border-radius: 2px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .itemTelemetry {
